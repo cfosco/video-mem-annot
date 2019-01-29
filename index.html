@@ -10,6 +10,7 @@
 
     <link rel="stylesheet" href="assets/lib/semantic/semantic.min.css">
     <link rel="stylesheet" href="assets/css/overrides.css">
+    <link rel="stylesheet" href="assets/css/mem_annot.css">
     <script src="assets/lib/jquery/jquery-3.1.1.min.js"></script>
     <script src="assets/lib/semantic/semantic.min.js"></script>
     <script src="assets/js/custom.js"></script>
@@ -57,22 +58,21 @@
         <!-- vv CUSTOM EXPERIMENT MARKUP GOES HERE vv -->
         <div class="row" id="custom-experiment">
 
-          <div class="centered">
+          <div id="video_container" class=" row ">
           <h3> Level 1 </h3>
-          <h4> Watch the following sequence of videos and press R or SPACEBAR when you recognize a repeated video! </h4>
-          <video id="preview" width="400" controls>
+          <h4> Watch the following sequence of videos and press R when you recognize a repeated video! </h4>
+          <video id="video_canvas" width="500" controls>
           <!--   <source src="" type="video/mp4"> -->
           <!--   <source src="" type="video/ogg"> -->
           Your browser does not support HTML5 video.
           </video>
           </div>
 
-            <h4 class="exp-data">Input data for task</h4>
-            <div class="right aligned twelve wide column" id="exp">
-                <div class="ui input">
-                <input id="exp-input">
-                </div>
-            </div>
+        </div>
+        <div class="row">
+        <button id="playButton" class="ui green button">Play</button>
+        <button id="pauseButton" class="ui green button">Pause</button>
+        <button id="resumeButton" class="ui green button">Resume</button>
         </div>
         <!-- ^^ CUSTOM EXPERIMENT MARKUP GOES HERE ^^ -->
         <div id="demo-survey" class ="ui top aligned centered grid"></div>

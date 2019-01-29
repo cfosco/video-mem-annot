@@ -1,27 +1,27 @@
 {
     "meta": {
         "title": "Experiment Title",
-        "description": "desc",
-        "numSubtasks": 3,
+        "description": "Annotation task for Memorability on Videos",
+        "numSubtasks": 1,
         "disclaimer": "This is a disclaimer. You are participating in this experiment voluntarily.",
         "aggregate": false
     },
     "instructions": {
-        "simple": "These are simple instructions for <b>3</b> tasks",
+        "simple": "A video player will be shown. When play is clicked, multiple 3 second videos will start playing one after the other. Your task is to try to detect which videos are repeated in the sequence. Press R when you see a repeat!",
         "steps": [
-            "instruction1",
-            "instruction2",
-            "instruction3"
+            "Press the play button to start the video sequence",
+            "Press R when you see a repeated video.",
+            "If your accuracy is good, you will be able to advance to the next level!"
         ],
         "images": []
     },
     "hitCreation": {
-        "title": "HIT Title",
-        "description": "HIT description",
+        "title": "Video Memorability Annotation Task",
+        "description": "Indicate which videos you remember by playing a simple memory game on short 3 second videos!",
         "numTasks": 5,
         "numAssignments": 100,
         "rewardAmount": "0.00",
-        "keywords": "these, are, your, HIT, tags",
+        "keywords": "videos, memorability, memory, game",
         "duration": 1200,
         "lifetime": 86400,
         "taskUrl": "",
