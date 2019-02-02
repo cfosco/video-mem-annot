@@ -1,8 +1,30 @@
-#video_container > video {
-  display: none;
-  width: 500px;
+
+/* we do this by having a smaller container with hidden overflow */
+
+#video_container {
+  /* video size: 16:9 aspect ratio */
+  width: 480px;
+  height: 270px;
+  /* video size will exceed the container: hide the excess */
+  overflow: hidden;
+  /* center video on page*/
+  margin: auto;
 }
 
+#video_container > video {
+  /* we have many video elements but only want to show the top one */
+  display: none;
+  /* 16:9 ratio but a bit larger than the container */
+  width: 496px;
+  height: 279px;
+  /* sometimes videos have tiny borders, so shift back from origin a bit */
+  margin-top: -8px;
+  margin-left: -4.5px;
+  /* picture fill whole element without stretching (cropping if necessary) */
+  object-fit: cover;
+}
+
+/* override style to make top video show */
 #video_container > video:first-child {
   display: initial;
 }
