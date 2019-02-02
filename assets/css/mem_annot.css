@@ -1,5 +1,8 @@
-#video_canvas{
+#video_container > video {
+  display: none;
+  width: 500px;
+}
 
-  border: 8px solid white;
-
+#video_container > video:first-child {
+  display: initial;
 }
