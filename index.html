@@ -50,30 +50,36 @@
             </div>
         </div>
         <div id="experiment" class="ui top aligned centered relaxed grid">
-            <div class="row">
-                <div class="sixteen wide column">
-                    <div id="progress-bar" class="ui small olive progress">
-                        <div class="bar"></div>
-                        <div class="label"></div>
-                    </div>
-                </div>
-            </div>
-            <!-- vv CUSTOM EXPERIMENT MARKUP GOES HERE vv -->
             <div class="row" id="custom-experiment">
-                <div>
-                    <h3> Level 1 </h3>
-                    <h4> Watch the following sequence of videos and press R when you recognize a repeated video! </h4>
-                    <div id="video_container">
-                        <!-- video elements get added here -->
+            <!-- vv CUSTOM EXPERIMENT MARKUP GOES HERE vv -->
+                <h3> Level 1 </h3>
+                <h4> Watch the following sequence of videos and press R when you recognize a repeated video! </h4>
+                <div id="main-interface">
+                    <div id="video-and-life">
+                        <div id="life-bar">
+                            <div class="ui small olive progress">
+                                <div class="bar"></div>
+                                <div class="label">Accuracy</div>
+                            </div>
+                        </div>
+                        <div id="video_container">
+                            <!-- video elements get added here -->
+                        </div>
+                    </div>
+                    <div id="progress-bar">
+                        <div class="ui small olive progress">
+                            <div class="bar"></div>
+                            <div class="label">Progress</div>
+                        </div>
                     </div>
                 </div>
-
-            </div>
-            <div class="row">
-                <button id="playButton" class="ui green button">Play</button>
-                <button id="pauseButton" class="ui green button">Pause</button>
-            </div>
+                <div class="row">
+                    <button id="playButton" class="ui green button">Play</button>
+                    <button id="pauseButton" class="ui green button">Pause</button>
+                </div>
             <!-- ^^ CUSTOM EXPERIMENT MARKUP GOES HERE ^^ -->
+            </div>
+
             <div id="demo-survey" class="ui top aligned centered grid"></div>
             <div class="middle aligned row">
                 <div class="eight wide column">

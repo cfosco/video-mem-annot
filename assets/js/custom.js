@@ -9,6 +9,7 @@ var custom = {
      * returns: if config.meta.aggregate is set to false, an array of objects with length config.meta.numTasks,
      * one object for each task; else, an object that will be made available to all subtasks
      */
+
     return $.get("").then(function () {
       return [];
     });
@@ -36,6 +37,23 @@ var custom = {
     // if (taskIndex == 1) {
     //     hideIfNotAccepted();
     // }
+
+    // config options
+    var SHOW_PROGRESS = true;
+    var SHOW_LIFE = true;
+    var PLAY_SOUND = true;
+    var SHOW_FLASH = true;
+    var JUMP_ON_RIGHT = true;
+    var JUMP_ON_WRONG = true;
+    var FAIL_THRESHOLD = 0.6; // frac of vig. vids must get right
+    var BONUS_THRESHOLD = 0.9; // frac of all vids right for bonus
+
+    if (!SHOW_PROGRESS) {
+      $('#progress-bar').css('display', 'none');
+    }
+    if (!SHOW_LIFE) {
+      $('#life-bar').css('display', 'none');
+    }
 
     // string[] -- urls for videos composing a 3-5 minute "movie" of 3s clips
 
@@ -67,8 +85,21 @@ var custom = {
 
     ]
 
+<<<<<<< HEAD
     console.log('OUTSIDE',transcripts)
 
+=======
+    // get DOM references
+    var $progressBar =  $("#progress-bar > .ui.progress");
+    var $lifeBar =  $("#life-bar > .ui.progress");
+    var $mainInterface = $('#main-interface');
+    var videoContainer = document.getElementById('video_container');
+
+    // init progress & life bars
+    $progressBar.progress({ total: transcripts.length });
+    $lifeBar.progress({ total: 100, showActivity: false });
+    
+>>>>>>> d06e876e372744f3f80550b2a6a8f6dca9133e6e
     // constants
     var CLIP_DURATION = 3; // in seconds
     var NUM_LOAD_AHEAD = 4;
@@ -76,49 +107,136 @@ var custom = {
     // state
     var videoElements = [];
     var counter = 0; // index in transcripts of next video to load
+    var checked = false; // don't check video at end if already checked
+
+    // life state
+    var numVideos = 5;
+    var numVideosRight = 4;
+    var numVigilance = 2;
+    var numVigilanceRight = 2;
+
+    function updateLife() {
+      var smallerFrac = Math.min(
+        numVigilanceRight / numVigilance,
+        numVideosRight / numVideos
+      );
+      var newLife = Math.floor(
+        (smallerFrac - FAIL_THRESHOLD) / (1 - FAIL_THRESHOLD) * 100
+      );
+      $lifeBar.removeClass('orange');
+      $lifeBar.removeClass('olive');
+      $lifeBar.removeClass('green');
+      if (newLife <= 30) {
+        $lifeBar.addClass('orange');
+      } else if (numVideosRight / numVideos >= BONUS_THRESHOLD) {
+        $lifeBar.addClass('green');
+      } else {
+        $lifeBar.addClass('olive');
+      }
+      $lifeBar.progress("set progress", newLife);
+    }
+
+    // returns true or false for if current video is a repeat
+    function isRepeat() {
+      return true || Math.random() < 0.5; // TODO: real check
+    }
+
+    function isVigilance() {
+      return Math.random() < 0.5; // TODO: real check
+    }
+
+    // update the UI after user reports or misses repeat
+    function handleCheck(right) {
+      checked = true;
+      var vigilance = isVigilance();
+
+      numVideos += 1;
+      numVideosRight += right ? 1 : 0;
+      numVigilance += vigilance ? 1 : 0;
+      numVigilanceRight += (right && vigilance) ? 1 : 0;
+
+      if ((right && JUMP_ON_RIGHT) || (!right && JUMP_ON_WRONG)) {
+        videoElements[0].currentTime = CLIP_DURATION; // trigger end
+      }
+
+      if (PLAY_SOUND) {
+        (right
+          ? new Audio('assets/wav/correct.wav')
+          : new Audio('assets/wav/wrong.wav')
+        ).play();
+      }
+
+      if (SHOW_FLASH) {
+        $mainInterface.css('animation', 'none');
+        // timeout is necessary to get anim to show
+        setTimeout(function() {
+          var val = (right ? 'right' : 'wrong') + ' 0.5s';
+          $mainInterface.css('animation', val);
+        });
+      }
+
+      if (numVigilanceRight / numVigilance < FAIL_THRESHOLD) {
+        alert('fail');
+      }
+
+      updateLife();
+    }
 
     // adds a new video element to the DOM
-    var videoContainer = document.getElementById('video_container');
     function newVideo(src) {
       var video = document.createElement('video');
       video.setAttribute('src', src);
+      video.muted = 'muted';
       video.innerHTML = 'Your browser does not support HTML5 video.';
       videoContainer.appendChild(video);
       videoElements.push(video);
 
       video.ontimeupdate = function() {
         if (video.currentTime >= CLIP_DURATION) {
+          // check for missed repeat
+          if (!checked && isRepeat()) {
+            handleCheck(false);
+          }
+          // remove active video
           video.ontimeupdate = function() {}; // sometimes it gets called again
           video.remove();
+          // play next video
           videoElements.shift();
           if (videoElements.length > 0) {
             videoElements[0].play();
           }
+          // queue up another video
           if (counter < transcripts.length) {
             newVideo(transcripts[counter]);
-            counter += 1;
           }
+          // update progress bar
+          $progressBar.progress("set progress", counter - NUM_LOAD_AHEAD);
+          // update state
+          counter += 1;
+          checked = false;
         }
       }
     }
 
-    // preload a few videos
+    // set up UI
     for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
       newVideo(transcripts[counter]);
     }
+    updateLife();
 
     /************************Actions*********************/
     // HANDLE KEYPRESS (R or Spacebar)
     document.onkeydown = function (e) {
       if (e.keyCode == 32 || e.keyCode == 82) {
-        document.getElementById("video_container").style = "border: 8px solid #76b900";
-        videoElements[0].currentTime = CLIP_DURATION; // trigger end
+        handleCheck(isRepeat());
+//         document.getElementById("video_container").style = "border: 8px solid #76b900";
+//         videoElements[0].currentTime = CLIP_DURATION; // trigger end
       }
     }
 
     document.onkeyup = function(e) {
       if(e.keyCode == 32 || e.keyCode == 82){
-        document.getElementById("video_container").style = "";
+//         document.getElementById("video_container").style = "";
         }
     }
 
