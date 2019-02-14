@@ -85,10 +85,6 @@ var custom = {
 
     ]
 
-<<<<<<< HEAD
-    console.log('OUTSIDE',transcripts)
-
-=======
     // get DOM references
     var $progressBar =  $("#progress-bar > .ui.progress");
     var $lifeBar =  $("#life-bar > .ui.progress");
@@ -98,8 +94,7 @@ var custom = {
     // init progress & life bars
     $progressBar.progress({ total: transcripts.length });
     $lifeBar.progress({ total: 100, showActivity: false });
-    
->>>>>>> d06e876e372744f3f80550b2a6a8f6dca9133e6e
+
     // constants
     var CLIP_DURATION = 3; // in seconds
     var NUM_LOAD_AHEAD = 4;
