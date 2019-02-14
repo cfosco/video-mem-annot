@@ -39,7 +39,7 @@ function updateTask() {
     if (config.advanced.hideIfNotAccepted && hideIfNotAccepted()) {
         return;
     }
-    $("#progress-bar").progress("set progress", state.taskIndex + 1);
+    // $("#progress-bar").progress("set progress", state.taskIndex + 1);
     if (isDemoSurvey()) {
         demoSurvey.showTask();
     } else {
@@ -201,9 +201,9 @@ function populateMetadata(config) {
         $("#instructions-demo").append($(imgEle));
 
     }
-    $("#progress-bar").progress({
-        total: config.meta.numSubtasks + config.advanced.includeDemographicSurvey,
-    });
+    // $("#progress-bar").progress({
+    //     total: config.meta.numSubtasks + config.advanced.includeDemographicSurvey,
+    // });
 }
 
 function setupButtons() {
