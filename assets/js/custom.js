@@ -241,8 +241,17 @@ var custom = {
     document.onkeydown = function (e) {
       if (e.keyCode == 32 || e.keyCode == 82) {
         handleCheck(isRepeat());
+//         document.getElementById("video_container").style = "border: 8px solid #76b900";
+//         videoElements[0].currentTime = CLIP_DURATION; // trigger end
       }
     }
+
+    document.onkeyup = function(e) {
+      if(e.keyCode == 32 || e.keyCode == 82){
+//         document.getElementById("video_container").style = "";
+        }
+    }
+
 
     //play
     var playBtn = document.getElementById('playButton');
