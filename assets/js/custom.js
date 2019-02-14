@@ -38,51 +38,36 @@ var custom = {
     // }
 
     // string[] -- urls for videos composing a 3-5 minute "movie" of 3s clips
+
+
     // TODO: get these on the server
-    var transcripts = [
+
+    var transcripts = [];
+    var types = [];
+
+    $.getJSON("test_json.json").done(function(data) {
+
+    vids = data.videos;
+    console.log(data, vids)
+    for (i=0; i<vids.length; i++) {
+      transcripts.push(vids[i]["url"])
+      types.push(vids[i]["type"])
+    }
+
+    console.log(transcripts)
+    console.log(types)
+
+
+
+
+    var transcripts2 = [
       "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
       "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
       "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-      "https://www.dropbox.com/s/evo48ad638e1j95/getty-at-the-police-officers-gesture-the-bulldozer-smashes-its-shovel-into-video-id654455954_31.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/cqntd1ngxpn8xm7/flickr-1-7-2-1-3-6-9-0-19617213690_2.mp4?raw=1",
-      "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-      "https://www.dropbox.com/s/evo48ad638e1j95/getty-at-the-police-officers-gesture-the-bulldozer-smashes-its-shovel-into-video-id654455954_31.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/cqntd1ngxpn8xm7/flickr-1-7-2-1-3-6-9-0-19617213690_2.mp4?raw=1",
-      "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-      "https://www.dropbox.com/s/evo48ad638e1j95/getty-at-the-police-officers-gesture-the-bulldozer-smashes-its-shovel-into-video-id654455954_31.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/cqntd1ngxpn8xm7/flickr-1-7-2-1-3-6-9-0-19617213690_2.mp4?raw=1",
-      "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-      "https://www.dropbox.com/s/evo48ad638e1j95/getty-at-the-police-officers-gesture-the-bulldozer-smashes-its-shovel-into-video-id654455954_31.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/cqntd1ngxpn8xm7/flickr-1-7-2-1-3-6-9-0-19617213690_2.mp4?raw=1",
-      "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-      "https://www.dropbox.com/s/evo48ad638e1j95/getty-at-the-police-officers-gesture-the-bulldozer-smashes-its-shovel-into-video-id654455954_31.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/cqntd1ngxpn8xm7/flickr-1-7-2-1-3-6-9-0-19617213690_2.mp4?raw=1",
-      "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-      "https://www.dropbox.com/s/evo48ad638e1j95/getty-at-the-police-officers-gesture-the-bulldozer-smashes-its-shovel-into-video-id654455954_31.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/cqntd1ngxpn8xm7/flickr-1-7-2-1-3-6-9-0-19617213690_2.mp4?raw=1",
-      "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-      "https://www.dropbox.com/s/evo48ad638e1j95/getty-at-the-police-officers-gesture-the-bulldozer-smashes-its-shovel-into-video-id654455954_31.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/cqntd1ngxpn8xm7/flickr-1-7-2-1-3-6-9-0-19617213690_2.mp4?raw=1",
+
     ]
+
+    console.log('OUTSIDE',transcripts)
 
     // constants
     var CLIP_DURATION = 3; // in seconds
@@ -149,6 +134,9 @@ var custom = {
     pauseBtn.onclick = function (e) {
       videoElements[0].pause();
     }
+
+
+      });
 
   },
 
