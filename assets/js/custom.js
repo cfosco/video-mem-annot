@@ -40,8 +40,8 @@ var custom = {
 
     // config options
     var SHOW_PROGRESS = true;
-    var SHOW_LIFE = true;
-    var PLAY_SOUND = true;
+    var SHOW_LIFE = false;
+    var PLAY_SOUND = false;
     var SHOW_FLASH = true;
     var JUMP_ON_RIGHT = true;
     var JUMP_ON_WRONG = true;
