@@ -1,24 +1,24 @@
 {
     "meta": {
-        "title": "Video Memorability Annotation Task",
-        "description": "Annotation task for Memorability on Videos",
+        "title": "Memento: The Video Memory Game",
+        "description": "Indicate which videos you remember by playing a simple memory game on short 3 second videos!",
         "numSubtasks": 1,
-        "disclaimer": "This is a disclaimer. You are participating in this experiment voluntarily.",
+        "disclaimer": "By playing this game, you are participating in a study being performed by MIT. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.",
         "aggregate": false
     },
     "instructions": {
-        "simple": "A video player will be shown. When play is clicked, multiple 3 second videos will start playing one after the other. Your task is to try to detect which videos are repeated in the sequence. Press R when you see a repeat!",
+        "simple": "You will watch a stream of 3-second videos. Your task is to tell us when you see a video we've already shown.",
         "steps": [
-            "Press the play button to start the video sequence",
-            "Press R when you see a repeated video.",
+            "Press the play button to start the video sequence.",
+            "Press R or SPACEBAR when you see a video that has been shown already.",
             "If your accuracy is good, you will be able to advance to the next level!"
         ],
         "images": []
     },
     "hitCreation": {
-        "title": "Video Memorability Annotation Task",
+        "title": "Memento: The Video Memory Game",
         "description": "Indicate which videos you remember by playing a simple memory game on short 3 second videos!",
-        "numTasks": 5,
+        "numTasks": 1,
         "numAssignments": 100,
         "rewardAmount": "0.00",
         "keywords": "videos, memorability, memory, game",

@@ -5,9 +5,9 @@
 <head>
     <meta charset="utf-8">
 
-    <title>Video Memorability Annotation Task</title>
-    <meta name="description" content="mturk task template">
-    <meta name="author" content="kimberli">
+    <title>Memento Game</title>
+    <meta name="description" content="Video Memory Game">
+    <meta name="author" content="Computational Perception and Cognition Group (CSAIL, MIT)">
 
     <link rel="stylesheet" href="assets/lib/semantic/semantic.min.css">
     <link rel="stylesheet" href="assets/css/overrides.css">
@@ -53,7 +53,7 @@
             <div class="row" id="custom-experiment">
             <!-- vv CUSTOM EXPERIMENT MARKUP GOES HERE vv -->
                 <h3> Level 1 </h3>
-                <h4> Watch the following sequence of videos and press R when you recognize a repeated video! </h4>
+                <h4> Watch videos and press R or SPACEBAR when you see one you've seen already!</h4>
                 <div id="main-interface">
                     <div id="life-bar">
                         <div class="ui small olive progress">
@@ -88,8 +88,10 @@
                 </div>
                 <div class="eight wide column">
                     <div id="button-row" class="field">
+                        <!--
                         <div id="next-button" class="ui primary right floated button">Next</div>
                         <div id="prev-button" class="ui primary right floated button">Prev</div>
+                        --->
                         <div class="ui button right floated instruction-button">Show instructions</div>
                     </div>
                 </div>
@@ -105,7 +107,7 @@
                             <textarea id="feedback-input" rows="2"></textarea>
                         </div>
                         <div id="submit-field" class="field">
-                            <div id="submit-button" class="ui green right floated button">Submit</div>
+                            <div id="submit-button" class="ui green right floated button">Submit  (Quit Game)</div>
                         </div>
                     </div>
                 </div>

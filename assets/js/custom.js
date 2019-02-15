@@ -56,35 +56,9 @@ var custom = {
       $('#main-interface').css('padding-right', '44px');
     }
 
-    // string[] -- urls for videos composing a 3-5 minute "movie" of 3s clips
-
-
-    // TODO: get these on the server
-
+    // populated in getJSON below
     var transcripts = [];
     var types = [];
-
-    $.getJSON("test_json.json").done(function(data) {
-
-    vids = data.videos;
-    console.log(data, vids)
-    for (i=0; i<vids.length; i++) {
-      transcripts.push(vids[i]["url"])
-      types.push(vids[i]["type"])
-    }
-
-    console.log(transcripts)
-    console.log(types)
-
-
-
-
-    var transcripts2 = [
-      "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-
-    ]
 
     // get DOM references
     var $progressBar =  $("#progress-bar > .ui.progress");
@@ -217,42 +191,39 @@ var custom = {
     }
 
     // set up UI
-    for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
-      newVideo(transcripts[counter]);
-    }
-    updateLife();
+    $.getJSON("test_json.json").done(function(data) {
+      var vids = data.videos;
+      for (var i=0; i < vids.length; i++) {
+        transcripts.push(vids[i]["url"])
+        types.push(vids[i]["type"])
+      }
+      for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
+        newVideo(transcripts[counter]);
+      }
+      updateLife();
+    });
 
     /************************Actions*********************/
     // HANDLE KEYPRESS (R or Spacebar)
     document.onkeydown = function (e) {
       if (e.keyCode == 32 || e.keyCode == 82) {
         handleCheck(isRepeat(), true);
-//         document.getElementById("video_container").style = "border: 8px solid #76b900";
-//         videoElements[0].currentTime = CLIP_DURATION; // trigger end
       }
     }
 
-    document.onkeyup = function(e) {
-      if(e.keyCode == 32 || e.keyCode == 82){
-//         document.getElementById("video_container").style = "";
-        }
-    }
 
-
-    //play
-    var playBtn = document.getElementById('playButton');
-    playBtn.onclick = function (e) {
+    $('#playButton').click(function() {
       videoElements[0].play();
-    }
+    });
 
-    //pause
-    var pauseBtn = document.getElementById('pauseButton');
-    pauseBtn.onclick = function (e) {
+    $('#pauseButton').click(function() {
       videoElements[0].pause();
-    }
+    });
 
-
-      });
+    // hide instruction button
+    // this button causes problems with the way we are loading videos
+    // TODO: either we must resolve these issues or remove the button
+    $(".instruction-button").hide();
 
   },
 
