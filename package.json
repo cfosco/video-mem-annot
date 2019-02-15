@@ -1,0 +1,25 @@
+{
+  "name": "memento",
+  "version": "1.0.0",
+  "description": "Memento: The Video Memory Game",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cfosco/video-mem-annot.git"
+  },
+  "author": "Computational Perception & Cognition Group (CSAIL, MIT)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/cfosco/video-mem-annot/issues"
+  },
+  "homepage": "https://github.com/cfosco/video-mem-annot#readme",
+  "dependencies": {
+    "cookie-parser": "^1.4.4",
+    "debug": "^4.1.1",
+    "express": "^4.16.4",
+    "morgan": "^1.9.1"
+  }
+}

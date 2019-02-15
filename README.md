@@ -2,7 +2,9 @@
 A general-purpose template for Amazon Mechanical Turk tasks.
 
 ### Development
-Run something like `python3 -m http.server` to test out the UI locally.
+The first time you clone: `npm install`
+
+To run the app: `npm start`
 
 Jupyter notebooks in the `mturk` folder are provided for launching and monitoring HITs. Edit the `hitCreation` fields in `config.json` to define how to set up your HITs.
 
@@ -12,10 +14,10 @@ This framework can be used to create MTurk HITs, broken up into discrete repeate
 To define your MTurk HIT, you only need to change things in three places: `index.js`, `custom.js`, and `config.json`. 
 
 #### `index.html`
-Find the section marked `<!-- vv CUSTOM EXPERIMENT MARKUP GOES HERE vv -->`, and add your custom HTML elements in that section (e.g. image divs, input boxes). Add `id`s to those HTML elements so you can easily refer to them with JQuery in the page's JavaScript (see `assets/js/custom.js`).
+Find the section marked `<!-- vv CUSTOM EXPERIMENT MARKUP GOES HERE vv -->`, and add your custom HTML elements in that section (e.g. image divs, input boxes). Add `id`s to those HTML elements so you can easily refer to them with JQuery in the page's JavaScript (see `public/js/custom.js`).
 
-#### `assets/js/custom.js`
-Fill out the 4 functions: `loadTasks`, `showTask`, `collectData`, and `validateTask`. These define behavior for loading initial data, displaying a task, storing data from a task, and validating a task. We recommmend starting by copying one of our template files: `assets/js/aggregate-template.js` if you have set `config.meta.aggregate=true` or `assets/js/no-aggregate-template.js` if you have set `config.meta.aggregate=false`. 
+#### `public/js/custom.js`
+Fill out the 4 functions: `loadTasks`, `showTask`, `collectData`, and `validateTask`. These define behavior for loading initial data, displaying a task, storing data from a task, and validating a task. We recommmend starting by copying one of our template files: `public/js/aggregate-template.js` if you have set `config.meta.aggregate=true` or `public/js/no-aggregate-template.js` if you have set `config.meta.aggregate=false`. 
 
 #### `config.json`
 Here, you can define your HIT's name, description, number of subtasks, instructions, etc. Keep reading for a detailed description of the fields in the config. 
