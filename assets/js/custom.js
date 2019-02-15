@@ -133,7 +133,7 @@ var custom = {
 
     // returns true or false for if current video is a repeat
     function isRepeat() {
-      return true || Math.random() < 0.5; // TODO: real check
+      return Math.random() < 0.5; // TODO: real check
     }
 
     function isVigilance() {
@@ -141,7 +141,7 @@ var custom = {
     }
 
     // update the UI after user reports or misses repeat
-    function handleCheck(right) {
+    function handleCheck(right, showFeedback=false) {
       checked = true;
       var vigilance = isVigilance();
 
@@ -150,28 +150,30 @@ var custom = {
       numVigilance += vigilance ? 1 : 0;
       numVigilanceRight += (right && vigilance) ? 1 : 0;
 
-      if ((right && JUMP_ON_RIGHT) || (!right && JUMP_ON_WRONG)) {
-        videoElements[0].currentTime = CLIP_DURATION; // trigger end
-      }
-
-      if (PLAY_SOUND) {
-        (right
-          ? new Audio('assets/wav/correct.wav')
-          : new Audio('assets/wav/wrong.wav')
-        ).play();
-      }
-
-      if (SHOW_FLASH) {
-        $mainInterface.css('animation', 'none');
-        // timeout is necessary to get anim to show
-        setTimeout(function() {
-          var val = (right ? 'right' : 'wrong') + ' 0.5s';
-          $mainInterface.css('animation', val);
-        });
+      if (showFeedback) {
+        if ((right && JUMP_ON_RIGHT) || (!right && JUMP_ON_WRONG)) {
+          videoElements[0].currentTime = CLIP_DURATION; // trigger end
+        }
+  
+        if (PLAY_SOUND) {
+          (right
+            ? new Audio('assets/wav/correct.wav')
+            : new Audio('assets/wav/wrong.wav')
+          ).play();
+        }
+  
+        if (SHOW_FLASH) {
+          $mainInterface.css('animation', 'none');
+          // timeout is necessary to get anim to show
+          setTimeout(function() {
+            var val = (right ? 'right' : 'wrong') + ' 0.5s';
+            $mainInterface.css('animation', val);
+          });
+        }
       }
 
       if (numVigilanceRight / numVigilance < FAIL_THRESHOLD) {
-        alert('fail');
+        console.log('FAIL') // TODO
       }
 
       updateLife();
@@ -190,7 +192,7 @@ var custom = {
         if (video.currentTime >= CLIP_DURATION) {
           // check for missed repeat
           if (!checked && isRepeat()) {
-            handleCheck(false);
+            handleCheck(false, false);
           }
           // remove active video
           video.ontimeupdate = function() {}; // sometimes it gets called again
@@ -223,7 +225,7 @@ var custom = {
     // HANDLE KEYPRESS (R or Spacebar)
     document.onkeydown = function (e) {
       if (e.keyCode == 32 || e.keyCode == 82) {
-        handleCheck(isRepeat());
+        handleCheck(isRepeat(), true);
 //         document.getElementById("video_container").style = "border: 8px solid #76b900";
 //         videoElements[0].currentTime = CLIP_DURATION; // trigger end
       }
