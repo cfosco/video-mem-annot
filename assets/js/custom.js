@@ -51,8 +51,9 @@ var custom = {
     if (!SHOW_PROGRESS) {
       $('#progress-bar').css('display', 'none');
     }
-    if (!SHOW_LIFE) {
-      $('#life-bar').css('display', 'none');
+    if (SHOW_LIFE) {
+      $('#life-bar').css('display', 'block');
+      $('#main-interface').css('padding-right', '44px');
     }
 
     // string[] -- urls for videos composing a 3-5 minute "movie" of 3s clips
