@@ -6,6 +6,10 @@ The first time you clone: `npm install`
 
 To run the app: `npm start`
 
+To run tests: `npm test`
+
+You need to add MySQL database credentials by setting the environment variables specified in `database/databaseConfig` or by editing the file directly (please do not push changes to the file if you do so).
+
 Jupyter notebooks in the `mturk` folder are provided for launching and monitoring HITs. Edit the `hitCreation` fields in `config.json` to define how to set up your HITs.
 
 ### UI Customization
