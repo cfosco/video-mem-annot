@@ -76,8 +76,6 @@ var custom = {
     console.log(types)
 
 
-
-
     var transcripts2 = [
       "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
       "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
@@ -89,6 +87,8 @@ var custom = {
     var $progressBar =  $("#progress-bar > .ui.progress");
     var $lifeBar =  $("#life-bar > .ui.progress");
     var $mainInterface = $('#main-interface');
+    var $experiment = $('#experiment');
+    var $endGame = $('#endGame')
     var videoContainer = document.getElementById('video_container');
 
     // init progress & life bars
@@ -171,7 +171,7 @@ var custom = {
       }
 
       if (numVigilanceRight / numVigilance < FAIL_THRESHOLD) {
-        alert('fail');
+        alert('You missed too many vigilance videos!');
       }
 
       updateLife();
@@ -199,6 +199,12 @@ var custom = {
           videoElements.shift();
           if (videoElements.length > 0) {
             videoElements[0].play();
+          }
+          else {
+            $experiment.css('display','none');
+            $endGame.css('display', 'flex');
+            $('#repeats-detected').text( (numVideosRight / numVideos).toFixed(3))
+
           }
           // queue up another video
           if (counter < transcripts.length) {
