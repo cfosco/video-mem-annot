@@ -1,0 +1,30 @@
+CREATE TABLE IF NOT EXISTS users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  worker_id VARCHAR(15) UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS videos (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  uri VARCHAR(255) UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS levels (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  id_user INT NOT NULL,
+  FOREIGN KEY(id_user) REFERENCES users(id),
+  score DECIMAL(10,9),
+  reward DECIMAL(4,2)
+);
+
+CREATE TABLE IF NOT EXISTS presentations (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  id_level INT NOT NULL,
+  FOREIGN KEY(id_level) REFERENCES levels(id),
+  id_video INT NOT NULL,
+  FOREIGN KEY(id_video) REFERENCES videos(id),
+  position INT NOT NULL,
+  vigilance BOOLEAN NOT NULL,
+  duplicate BOOLEAN NOT NULL,
+  response BOOLEAN,
+  seconds DECIMAL(5,4)
+);

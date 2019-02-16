@@ -1,0 +1,205 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>Memento Game</title>
+    <meta name="description" content="Video Memory Game">
+    <meta name="author" content="Computational Perception and Cognition Group (CSAIL, MIT)">
+
+    <link rel="stylesheet" href="lib/semantic/semantic.min.css">
+    <link rel="stylesheet" href="css/overrides.css">
+    <link rel="stylesheet" href="css/mem_annot.css">
+    <script src="lib/jquery/jquery-3.1.1.min.js"></script>
+    <script src="lib/semantic/semantic.min.js"></script>
+    <script src="js/require.js"></script>
+    <script src="js/custom.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/demo_survey.js"></script>
+</head>
+
+<body>
+    <div class="ui container">
+        <h1 id="page-title" class="meta-title ui centered dividing header"></h1>
+        <div id="instructions" class="ui top aligned centered grid">
+            <div class="row">
+                <div class="left aligned fourteen wide column">
+                    <h2>Instructions</h2>
+                    <p><b class="meta-desc"></b></p>
+                    <p class="instructions-simple"></p>
+                    <h3>Guidelines:</h3>
+                    <ol class="instructions-steps">
+                    </ol>
+                    <div id="sample-task">
+                        <h3>Sample task:</h3>
+                        <div id="instructions-demo"></div>
+                    </div>
+                    <div class="ui primary button right floated instruction-button">Continue</div>
+                </div>
+            </div>
+        </div>
+        <div class="ui error message subtask" id="hit-not-accepted" style="display:none">You have not yet accepted this
+            HIT. Please accept the HIT before you can see the rest of the task.</div>
+        <div id="succesful-submit" class="row" style="display: none; text-align:center">
+            <p class="ui header">Thank you for completing the task!</p>
+            <div style="background-color: lightgray; display: inline-block; align-items: center; padding: 20px; border-radius: 10px">
+                <p>MTurk submit code:</p>
+                <h1 class="ui header" id="submit-code"></h1>
+            </div>
+        </div>
+        <div id="experiment" class="ui top aligned centered relaxed grid">
+            <div class="row" id="custom-experiment">
+            <!-- vv CUSTOM EXPERIMENT MARKUP GOES HERE vv -->
+                <h3> Level 1 </h3>
+                <h4> Watch videos and press R or SPACEBAR when you see one you've seen already!</h4>
+                <div id="main-interface">
+                    <div id="life-bar">
+                        <div class="ui small olive progress">
+                            <div class="bar"></div>
+                            <div class="label">Accuracy</div>
+                        </div>
+                    </div>
+                    <div id="video-and-progress">
+                        <div id="video_container">
+                            <!-- video elements get added here -->
+                        </div>
+                        <div id="progress-bar">
+                            <div class="ui small olive progress">
+                                <div class="bar"></div>
+                                <div class="label">Progress</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <button id="playButton" class="ui green button">Play</button>
+                    <button id="pauseButton" class="ui green button">Pause</button>
+                </div>
+            <!-- ^^ CUSTOM EXPERIMENT MARKUP GOES HERE ^^ -->
+            </div>
+
+            <div id="demo-survey" class="ui top aligned centered grid"></div>
+            <div class="middle aligned row">
+                <div class="eight wide column">
+                    <div id="message-field" class="field">
+                    </div>
+                </div>
+                <div class="eight wide column">
+                    <div id="button-row" class="field">
+                        <!--
+                        <div id="next-button" class="ui primary right floated button">Next</div>
+                        <div id="prev-button" class="ui primary right floated button">Prev</div>
+                        --->
+                        <div class="ui button right floated instruction-button">Show instructions</div>
+                    </div>
+                </div>
+            </div>
+            <div class="top aligned row">
+                <div class="eight wide column"></div>
+                <div class="right aligned eight wide column">
+                    <div id="final-task-fields" class="ui form">
+                        <div id="feedback-field" class="field">
+                            <label>
+                                Any comments or feedback?
+                            </label>
+                            <textarea id="feedback-input" rows="2"></textarea>
+                        </div>
+                        <div id="submit-field" class="field">
+                            <div id="submit-button" class="ui green right floated button">Submit  (Quit Game)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="row">
+                <div id="disclaimer-box" class="center aligned fourteen wide column">
+                    <p class="disclaimer"></p>
+                </div>
+            </div>
+            <div class="row">
+                <form id="submit-form" name="submit-form">
+                </form>
+            </div>
+        </div>
+
+        <!--End of the experiment page-->
+        <div id="endGame" class="ui top aligned centered relaxed grid" style="display:none">
+
+            <div id ="final-task-layout" class="row">
+                <div class="two wide column"></div>
+                <div class="twelve wide column">
+                    <!--<div id="final-task-fields" class="ui form">-->
+                        <div id="performance-table">
+                            <h2>Thank you!</h2>
+
+                            <table border-collapse="collapse" width= "100%" padding="8px" bgcolor="#ADD8E6">
+                              <tr>
+                                <td align = "left" style="padding: 15px; font-weight: bold">Overall score:</td>
+                                <td id="repeats-detected" align = "right" style="padding: 15px; font-weight: bold">Calculating...</td>
+                              </tr>
+                              <tr>
+                                <td align = "left" style="padding: 15px; font-weight: bold">Tricked by non-repeats:</td>
+                                <td id="wrong-presses" align="right" style="padding: 15px; font-weight: bold">Calculating...</td>
+                              </tr>
+                              <tr></tr>
+                              <tr height = "50" style="vertical-align:bottom">
+                                <td align = "left" style="padding: 15px; border-top: 2px solid #ddd; font-weight: bold">Earnings so far:</td>
+                                <td id="earnings" align="right"style="padding: 15px; border-top: 2px solid #ddd; font-weight: bold">Calculating...</td>
+
+                              </tr>
+                              <!--
+                              <tr>
+                                  <td align = "left">Percentage correct:</td>
+                                <td id="percentage-correct" align="right">Calculating...</td>
+
+                              </tr>-->
+                            </table>
+                        </div>
+                        <div class="row" style="padding-bottom: 25px"></div>
+                        <div id="keep-playing" class="row" style="padding-bottom: 25px">
+                            <h2>Want to keep playing?</h2>
+                            <p > If the "Keep playing" button is enabled, you can! Just a few things to be aware of:</p>
+                            <ol id="end-instructions">
+                            </ol>
+                            <div id="maintenance-message" class="left floated" style="color: red"></div>
+                            <div id="more-button" class="ui blue right floated button">Keep playing</div>
+
+                        </div>
+                        <div id="stop-playing" class="row" style="display:None">
+                            <div id="end-text" class="eight wide column">
+                            </div>
+                        </div>
+
+
+                    <!--</div>-->
+                </div>
+                <div class="two wide column"></div>
+
+            </div>
+            <div class="row">
+                    <div class="two wide column"></div>
+                    <div class="twelve wide column">
+                        <div class = "row">
+                            <div id="no-more-button" class="ui blue right floated button">Go to submit page</div>
+                        </div>
+                    </div>
+                    <div class="two wide column"></div>
+
+            </div>
+            <div class="row" height = "10px">
+                <div class="sixteen wide column">
+                    <div class="ui divider"></div>
+                    <div id="disclaimer-box3" class="left aligned sixteen wide column"  style="font-size: 12px; color: slategrey">
+                        <p class="disclaimer"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</body>
+
+</html>

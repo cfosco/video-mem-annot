@@ -1,0 +1,86 @@
+@keyframes right {
+  0% { background-color: rgb(0, 255, 0, 0.25); }
+  100% { background-color: rgba(0, 0, 0, 0); }
+}
+
+@keyframes wrong {
+  0% { background-color: rgb(255, 0, 0, 0.25); }
+  100% { background-color: rgba(0, 0, 0, 0); }
+}
+
+#custom-experiment {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#main-interface {
+  background-color: rgba(0, 0, 0, 0);
+  border-radius: 10px;
+  /* determines border thickness */
+  /* top is already set due to progress and vid container size */
+  /* right gets increased in js if lifebar is visible */
+  padding: 0 16px;
+}
+
+#custom-experiment button {
+  width: 80px;
+  margin-top: 16px;
+}
+
+/* we need to show all videos with the same viewport
+we do this by having a smaller container with hidden overflow */
+#video_container {
+  /* video size: 16:9 aspect ratio */
+  width: 480px;
+  height: 270px;
+  /* video size will exceed the container: hide the excess */
+  overflow: hidden;
+  /* maintain main-interface size when lifebar hidden */
+  margin-top: 16px;
+}
+
+#video_container > video {
+  /* we have many video elements but only want to show the top one */
+  display: none;
+  /* 16:9 ratio but a bit larger than the container */
+  width: 496px;
+  height: 279px;
+  /* sometimes videos have tiny borders, so shift back from origin a bit */
+  margin-top: -8px;
+  margin-left: -4.5px;
+  /* picture fill whole element without stretching (cropping if necessary) */
+  object-fit: cover;
+}
+
+/* override style to make top video show */
+#video_container > video:first-child {
+  display: initial;
+}
+
+#life-bar {
+  float: right;
+  width: 270px;
+  -webkit-transform-origin: right;
+  -webkit-transform: rotate(-90deg);
+  -moz-transform-origin: right;
+  -moz-transform: rotate(-90deg);
+  -ms-transform-origin: right;
+  -ms-transform: rotate(-90deg);
+  transform-origin: right;
+  transform: rotate(-90deg);
+  position: relative;
+  display: none; /* gets overridden in js */
+}
+
+#life-bar > .ui.progress {
+  margin-bottom: 0;
+  top: 16px;
+  left: -6px;
+}
+
+#progress-bar {
+  width: 480px;
+  margin-top: 10px;
+  margin-right: auto;
+}
