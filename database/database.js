@@ -34,7 +34,11 @@ async function initDB() {
         .split(';') // one string per query
         .map(s => s.trim())
         .filter(s => s.length > 0); // trim surrounding whitespace
-      await Promise.all(createTableQueries.map(q => pool.query(q)));
+
+      // order matters here so we can't use Promise.all
+      for (let query of createTableQueries) {
+        await pool.query(query);
+      }
     } catch (e) {
       debug(e);
       debug('Error executing SQL. Tables may not be created.');
@@ -58,7 +62,21 @@ async function initDB() {
   }
 }
 
+async function withinTX(callback) {
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+  try {
+    await callback(connection);
+    await connection.commit();
+  } catch (e) {
+    await connection.rollback();
+    throw e;
+  }
+  await connection.release();
+}
+
 module.exports = {
   pool,
   initDB,
+  withinTX
 };

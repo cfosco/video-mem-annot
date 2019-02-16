@@ -24,7 +24,7 @@ function getSequence(numVideos, numVigilance, numTargets) {
     })
     .sort(rngCompare); 
 
-  return ids.map((i) => [indexes[i], vigilances[i]]);
+  return ids.map((i) => [indexes[i], !!vigilances[i]]);
 }
 
 module.exports = {
