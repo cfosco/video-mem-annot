@@ -45,11 +45,10 @@ async function getVideos(workerID, sequence) {
     const levelID = result.insertId;
 
     // get indexes that appear more than once (targets)
-    const indexSequence = sequence.map(([i]) => i);
     const targets = new Set();
-    indexSequence.forEach((index) => {
+    sequence.forEach(([index, vigilance]) => {
       if (targets.has(index)) targets.delete(index);
-      else targets.add(index);
+      else if (!vigilance) targets.add(index);
     });
     
     addedIndexes = new Set(); // mark duplicate when we add the same index a second time
