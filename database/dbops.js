@@ -44,14 +44,23 @@ async function getVideos(workerID, sequence) {
     const result = await connection.query('INSERT INTO levels (id_user) VALUES (?)', userID);
     const levelID = result.insertId;
 
-    addedIndexes = new Set();
+    // get indexes that appear more than once (targets)
+    const indexSequence = sequence.map(([i]) => i);
+    const targets = new Set();
+    indexSequence.forEach((index) => {
+      if (targets.has(index)) targets.delete(index);
+      else targets.add(index);
+    });
+    
+    addedIndexes = new Set(); // mark duplicate when we add the same index a second time
     const presentationInserts = sequence.map(([index, vigilance], position) => {
       const duplicate = addedIndexes.has(index);
+      const targeted = targets.has(index);
       addedIndexes.add(index);
-      return [levelID, videos[index].id, position, vigilance, duplicate];
+      return [levelID, videos[index].id, position, vigilance, duplicate, targeted];
     })
     await connection.query('INSERT INTO presentations'
-      + ' (id_level, id_video, position, vigilance, duplicate)'
+      + ' (id_level, id_video, position, vigilance, duplicate, targeted)'
       + ' VALUES ?',
       [presentationInserts]
     );

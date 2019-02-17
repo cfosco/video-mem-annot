@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS presentations (
   FOREIGN KEY(id_video) REFERENCES videos(id),
   position INT NOT NULL,
   vigilance BOOLEAN NOT NULL,
+  targeted BOOLEAN NOT NULL,
   duplicate BOOLEAN NOT NULL,
   response BOOLEAN,
   seconds DECIMAL(5,4)
