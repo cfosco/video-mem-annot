@@ -90,6 +90,7 @@ var custom = {
     var videoElements = [];
     var counter = 0; // index in transcripts of next video to load
     var checked = false; // don't check video at end if already checked
+    var responses = [];
 
     // life state
     var numVideos = 5;
@@ -180,6 +181,7 @@ var custom = {
         if (video.currentTime >= CLIP_DURATION) {
           // check for missed repeat
           if (!checked && isRepeat()) {
+            responses.push(false);
             handleCheck(false, false);
           }
           // remove active video
@@ -191,10 +193,19 @@ var custom = {
             videoElements[0].play();
           }
           else {
-            $experiment.css('display','none');
-            $endGame.css('display', 'flex');
-            $('#repeats-detected').text( (numVideosRight / numVideos).toFixed(3))
-
+            $.post({
+              "url": "api/end/",
+              "data": JSON.stringify({ 
+                workerID: "demo-worker",
+                responses: responses
+              }),
+              contentType: 'application/json; charset=utf-8',
+              dataType: 'json'
+            }).done(function(data) {
+              $experiment.css('display','none');
+              $endGame.css('display', 'flex');
+              $('#repeats-detected').text((data.overallScore).toFixed(3));
+            });
           }
           // queue up another video
           if (counter < transcripts.length) {
@@ -235,7 +246,8 @@ var custom = {
       if (e.keyCode == 32 || e.keyCode == 82) {
       	const curVidType = videoElements[0].dataset.vidType; 
       	console.log("curVidType", curVidType);
-      	const wasRepeat = (curVidType == VID_TYPES.VIG_REPEAT) || (curVidType == VID_TYPES.TARGET_REPEAT);
+        const wasRepeat = (curVidType == VID_TYPES.VIG_REPEAT) || (curVidType == VID_TYPES.TARGET_REPEAT);
+        responses.push(true);
         handleCheck(wasRepeat, showFeedback=true);
       }
     }
