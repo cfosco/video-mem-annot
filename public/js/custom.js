@@ -60,29 +60,26 @@ var custom = {
     var transcripts = [];
     var types = [];
 
-<<<<<<< HEAD:assets/js/custom.js
-    $.getJSON("test_json.json").done(function(data) {
+    // $.getJSON("test_json.json").done(function(data) {
+    //
+    // vids = data.videos;
+    // console.log(data, vids)
+    // for (i=0; i<vids.length; i++) {
+    //   transcripts.push(vids[i]["url"])
+    //   types.push(vids[i]["type"])
+    // }
+    //
+    // console.log(transcripts)
+    // console.log(types)
+    //
+    //
+    // var transcripts2 = [
+    //   "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
+    //   "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
+    //   "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
+    //
+    // ]
 
-    vids = data.videos;
-    console.log(data, vids)
-    for (i=0; i<vids.length; i++) {
-      transcripts.push(vids[i]["url"])
-      types.push(vids[i]["type"])
-    }
-
-    console.log(transcripts)
-    console.log(types)
-
-
-    var transcripts2 = [
-      "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
-      "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-      "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-
-    ]
-
-=======
->>>>>>> d246d911f8930fa3a73fc3a2146a4a691b584c6a:public/js/custom.js
     // get DOM references
     var $progressBar =  $("#progress-bar > .ui.progress");
     var $lifeBar =  $("#life-bar > .ui.progress");
@@ -154,14 +151,14 @@ var custom = {
         if ((right && JUMP_ON_RIGHT) || (!right && JUMP_ON_WRONG)) {
           videoElements[0].currentTime = CLIP_DURATION; // trigger end
         }
-  
+
         if (PLAY_SOUND) {
           (right
             ? new Audio('wav/correct.wav')
             : new Audio('wav/wrong.wav')
           ).play();
         }
-  
+
         if (SHOW_FLASH) {
           $mainInterface.css('animation', 'none');
           // timeout is necessary to get anim to show
@@ -173,11 +170,7 @@ var custom = {
       }
 
       if (numVigilanceRight / numVigilance < FAIL_THRESHOLD) {
-<<<<<<< HEAD:assets/js/custom.js
-        alert('You missed too many vigilance videos!');
-=======
         console.log('FAIL') // TODO
->>>>>>> d246d911f8930fa3a73fc3a2146a4a691b584c6a:public/js/custom.js
       }
 
       updateLife();
