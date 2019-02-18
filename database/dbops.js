@@ -40,11 +40,10 @@ async function getVideos(workerID, seqTemplate) {
   const userID = await getUser(workerID);
 
   // get N least-seen videos user hasn't seen yet
-  const videos = await pool.query('SELECT videos.id, uri'
-    + ' FROM videos LEFT JOIN presentations ON videos.id = presentations.id_video'
-    + ' WHERE videos.id NOT IN'
+  const videos = await pool.query('SELECT id, uri'
+    + ' FROM videos WHERE id NOT IN'
     + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
-    + ' GROUP BY videos.id ORDER BY COUNT(videos.id) ASC LIMIT ?',
+    + ' ORDER BY labels ASC LIMIT ?',
     [userID, numVideos]
   );
   if (videos.length < numVideos) {
@@ -67,11 +66,20 @@ async function getVideos(workerID, seqTemplate) {
     // vigilance: was this a 1st or 2nd repeat of a vig video? 
     // duplicate: was this the second presentation of a video? 
     // targeted: was this 1st or 2nd repeat of a target video? 
-    await connection.query('INSERT INTO presentations'
+    const bulkInsertPromise = connection.query('INSERT INTO presentations'
       + ' (id_level, id_video, position, vigilance, duplicate, targeted)'
       + ' VALUES ?',
       [presentationInserts]
     );
+
+    const promises = ordering
+      .filter(([index, type]) => type === VID_TYPES.TARGET)
+      .map(([index]) => connection.query('UPDATE videos SET labels = labels + 1'
+        + ' WHERE id = ?', videos[index].id)
+      );
+
+    promises.push(bulkInsertPromise);
+    await Promise.all(promises);
   });
   
   const vidData = ordering.map(([index, type]) => {
