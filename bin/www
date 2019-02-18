@@ -6,7 +6,7 @@
 const app = require('../app');
 const debug = require('debug')('memento:server');
 const http = require('http');
-const { initDB } = require('./database/database');
+const { initDB } = require('../database/database');
 
 /**
  * Normalize a port into a number, string, or false.
