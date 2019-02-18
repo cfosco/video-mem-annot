@@ -44,7 +44,7 @@ var custom = {
     var PLAY_SOUND = false;
     var SHOW_FLASH = true;
     var JUMP_ON_RIGHT = true;
-    var JUMP_ON_WRONG = true;
+    var JUMP_ON_WRONG = false;
     var FAIL_THRESHOLD = 0.6; // frac of vig. vids must get right
     var BONUS_THRESHOLD = 0.9; // frac of all vids right for bonus
 
@@ -128,6 +128,117 @@ var custom = {
       $lifeBar.progress("set progress", newLife);
     }
 
+    function resultsPage() {
+      $experiment.css('display','none');
+      $endGame.css('display', 'flex');
+      $('#repeats-detected').text( (numVideosRight / numVideos).toFixed(3))
+
+      // Graph
+      var margin = {top: 20, right: 50, bottom: 30, left: 50},
+          width = 640 - margin.left - margin.right,
+          height = 300 - margin.top - margin.bottom;
+
+
+      var data = [[1,0.3],[2,0.54],[3,0.55],[4,0.67],[5,0.65],
+                  [6,0.71],[7,0.73],[8,0.76],[9,0.71],[10,0.85]]
+
+      // var data = d3.range(n).map(function(d) { return {"y": d3.randomUniform(1)() } })
+
+      var x = d3.scale.linear()
+          .range([0, width]);
+
+      var y = d3.scale.linear()
+          .range([height, 0]);
+
+      x.domain([1, data.length]);
+      y.domain([0,1]);
+
+      var xAxis = d3.svg.axis()
+          .scale(x)
+          .orient("bottom");
+
+      var yAxis = d3.svg.axis()
+          .scale(y)
+          .orient("left");
+
+
+      var line = d3.svg.line()
+          .x(function(d,i) { console.log(i); return x(d[0]); })
+          .y(function(d) { return y(d[1]); });
+
+      var svg = d3.select("body").append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+
+          // data.forEach(function(d) {
+          //   d.date = parseDate(d.date);
+          //   d.close = +d.close;
+          // });
+
+          // data.sort(function(a, b) {
+          //   return a.date - b.date;
+          // });
+
+
+          svg.append("g")
+              .attr("class", "x axis")
+              .attr("transform", "translate(0," + height + ")")
+              .call(xAxis);
+
+          svg.append("g")
+              .attr("class", "y axis")
+              .call(yAxis)
+            .append("text")
+              .attr("transform", "rotate(-90)")
+              .attr("y", 6)
+              .attr("dy", ".71em")
+              .style("text-anchor", "end")
+              .text("Accuracy");
+
+          svg.append("path")
+            .datum(data) // 10. Binds data to the line
+            .attr("class", "line") // Assign a class for styling
+            .attr("d", line); // 11. Calls the line generator
+
+          var focus = svg.append("g")
+              .attr("class", "focus")
+              .style("display", "none");
+
+          focus.append("circle")
+              .attr("r", 4.5);
+
+          focus.append("text")
+              .attr("x", 9)
+              .attr("dy", ".35em");
+
+          svg.append("rect")
+              .attr("class", "overlay")
+              .attr("width", width)
+              .attr("height", height)
+              .on("mouseover", function() { focus.style("display", null); })
+              .on("mouseout", function() { focus.style("display", "none"); })
+              .on("mousemove", mousemove);
+
+          function mousemove() {
+            var x0 = x.invert(d3.mouse(this)[0])
+            var i = Math.round(x0)
+            if (i > data.length) {
+              i = data.length
+            }
+                // d0 = data[i - 1],
+                // d1 = data[i],
+                // d = x0 - d0.date > d1.date - x0 ? d1 : d0;
+            console.log(x0, i)
+            focus.attr("transform", "translate(" + x(i) + "," + y(data[i-1][1]) + ")");
+            focus.select("text").text(data[i-1][1]);
+          }
+
+    }
+
     // returns true or false for if current video is a repeat
     function isRepeat() {
       return Math.random() < 0.5; // TODO: real check
@@ -200,9 +311,7 @@ var custom = {
             videoElements[0].play();
           }
           else {
-            $experiment.css('display','none');
-            $endGame.css('display', 'flex');
-            $('#repeats-detected').text( (numVideosRight / numVideos).toFixed(3))
+            resultsPage()
 
           }
           // queue up another video
