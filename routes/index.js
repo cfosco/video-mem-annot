@@ -1,11 +1,11 @@
 const express = require('express');
 const { getVideos, saveAnswers } = require('../database/dbops');
-const { getSequence } = require('../utils/sequence');
+const { getSeqTemplate } = require('../utils/sequence');
 
 const router = express.Router();
 
 router.post('/start', (req, res) => {
-  getVideos(req.body.workerID, getSequence(100, 5, 20))
+  getVideos(req.body.workerID, getSeqTemplate())
     .then(body => res.send(body))
     .catch((err) => res.send(400, err.message));
 });

@@ -1,32 +1,26 @@
-function getSequence(numVideos, numVigilance, numTargets) {
-  const rngCompare = () => Math.random() < 0.5 ? -1 : 1;
-  const numIndexes = numVideos - numVigilance - numTargets;
-  const numRepeats = numVigilance + numTargets;
+const fs = require('fs');
+const path = require('path');
+const debug = require('debug')('memento:server');
 
-  const indexes = [...Array(numIndexes).keys()]
-    .sort(rngCompare);
+function randIntInRange(low, high) {
+    var r = Math.random();
+    return Math.floor(r*(high-low) + low);
+}
 
-  const vigilances = [...Array(numRepeats).keys()]
-    .map((i) => i < numVigilance)
-    .sort(rngCompare);
-
-  let id = 0;
-  const ids = [...Array(numVideos).keys()]
-    .map((i) => {
-      const index = id;
-      if (
-        (i >= ((numVigilance + numTargets) * 2))
-        || ((i % 2) === 1)
-      ) {
-        id += 1;
-      }
-      return index;
-    })
-    .sort(rngCompare); 
-
-  return ids.map((i) => [indexes[i], !!vigilances[i]]);
+function getSeqTemplate() {
+    let nTemplates = 1000;
+    let templatesPath = "public/task_data/level_templates/";
+    let templateNum = randIntInRange(0, nTemplates-1);
+    let templateFile = "template_" + templateNum.toString() + ".json";
+    try {
+        const template = JSON.parse(fs.readFileSync(path.join(templatesPath, templateFile), 'utf8'));
+        return template;
+    } catch (e) {
+        debug(e);
+        debug("Unable to load a template file!");
+    }
 }
 
 module.exports = {
-  getSequence
+  getSeqTemplate
 };
