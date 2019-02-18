@@ -1,3 +1,13 @@
+BASE_PATH_VIDEOS = "http://data.csail.mit.edu/soundnet/actions3/"; 
+
+const VID_TYPES = {
+    TARGET_REPEAT: "target_repeat",
+    VIG_REPEAT: "vig_repeat",
+    VIG: "vig",
+    TARGET: "target",
+    FILLER: "filler",
+}
+
 var custom = {
 
   loadTasks: function (numSubtasks) {
@@ -59,26 +69,6 @@ var custom = {
     // populated in getJSON below
     var transcripts = [];
     var types = [];
-
-    // $.getJSON("test_json.json").done(function(data) {
-    //
-    // vids = data.videos;
-    // console.log(data, vids)
-    // for (i=0; i<vids.length; i++) {
-    //   transcripts.push(vids[i]["url"])
-    //   types.push(vids[i]["type"])
-    // }
-    //
-    // console.log(transcripts)
-    // console.log(types)
-    //
-    //
-    // var transcripts2 = [
-    //   "https://www.dropbox.com/s/zvdmd1amf1bcy2r/flickr-0-5-6-10568583056_3.mp4?raw=1",
-    //   "https://www.dropbox.com/s/yd4pwarjkqr8mcd/flickr-2-6-2-9-2-3-7-2-2526292372_2.mp4?raw=1",
-    //   "https://www.dropbox.com/s/dtw1n4pr5hi23ki/bulldozer-clears-road-and-military-assist-in-rebuilding-bridge-video-id1B011458_0005.mp4?raw=1",
-    //
-    // ]
 
     // get DOM references
     var $progressBar =  $("#progress-bar > .ui.progress");
@@ -177,9 +167,10 @@ var custom = {
     }
 
     // adds a new video element to the DOM
-    function newVideo(src) {
+    function newVideo(src, type) {
       var video = document.createElement('video');
       video.setAttribute('src', src);
+      video.dataset.vidType = type; 
       video.muted = 'muted';
       video.innerHTML = 'Your browser does not support HTML5 video.';
       videoContainer.appendChild(video);
@@ -207,7 +198,7 @@ var custom = {
           }
           // queue up another video
           if (counter < transcripts.length) {
-            newVideo(transcripts[counter]);
+            newVideo(transcripts[counter], types[counter]);
           }
           // update progress bar
           $progressBar.progress("set progress", counter - NUM_LOAD_AHEAD);
@@ -219,14 +210,21 @@ var custom = {
     }
 
     // set up UI
-    $.getJSON("test_json.json").done(function(data) {
+    //$.getJSON("test_json.json").done(function(data) {
+    $.post({
+    	"url": "api/start/",
+    	"data": { 
+    		workerID: "demo-worker"
+    	}
+    }).done(function(data) {
+      console.log("data", data);
       var vids = data.videos;
       for (var i=0; i < vids.length; i++) {
-        transcripts.push(vids[i]["url"])
+        transcripts.push(BASE_PATH_VIDEOS + vids[i]["url"])
         types.push(vids[i]["type"])
       }
       for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
-        newVideo(transcripts[counter]);
+        newVideo(transcripts[counter], types[counter]);
       }
       updateLife();
     });
@@ -235,7 +233,10 @@ var custom = {
     // HANDLE KEYPRESS (R or Spacebar)
     document.onkeydown = function (e) {
       if (e.keyCode == 32 || e.keyCode == 82) {
-        handleCheck(isRepeat(), true);
+      	const curVidType = videoElements[0].dataset.vidType; 
+      	console.log("curVidType", curVidType);
+      	const wasRepeat = (curVidType == VID_TYPES.VIG_REPEAT) || (curVidType == VID_TYPES.TARGET_REPEAT);
+        handleCheck(wasRepeat, showFeedback=true);
       }
     }
 

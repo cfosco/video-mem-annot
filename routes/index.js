@@ -4,6 +4,10 @@ const { getSeqTemplate } = require('../utils/sequence');
 
 const router = express.Router();
 
+// TODO: add some input validation, rn the error message in the browser
+// does not make sense
+// TODO: if you request a file that does not exist, no 404 is thrown
+
 router.post('/start', (req, res) => {
   getVideos(req.body.workerID, getSeqTemplate())
     .then(body => res.send(body))
