@@ -54,7 +54,7 @@ var custom = {
     var PLAY_SOUND = false;
     var SHOW_FLASH = true;
     var JUMP_ON_RIGHT = true;
-    var JUMP_ON_WRONG = true;
+    var JUMP_ON_WRONG = false;
     var FAIL_THRESHOLD = 0.6; // frac of vig. vids must get right
     var BONUS_THRESHOLD = 0.9; // frac of all vids right for bonus
 
@@ -129,7 +129,11 @@ var custom = {
     }
 
     // update the UI after user reports or misses repeat
-    function handleCheck(right, showFeedback=false) {
+    function handleCheck(repeat, response, showFeedback) {
+      if (checked) return;
+
+      responses.push(response);
+      var right = repeat === response;
       checked = true;
       var vigilance = isVigilance();
 
@@ -180,10 +184,7 @@ var custom = {
       video.ontimeupdate = function() {
         if (video.currentTime >= CLIP_DURATION) {
           // check for missed repeat
-          if (!checked && isRepeat()) {
-            responses.push(false);
-            handleCheck(false, false);
-          }
+          handleCheck(isRepeat(), false, false);
           // remove active video
           video.ontimeupdate = function() {}; // sometimes it gets called again
           video.remove();
@@ -247,8 +248,7 @@ var custom = {
       	const curVidType = videoElements[0].dataset.vidType; 
       	console.log("curVidType", curVidType);
         const wasRepeat = (curVidType == VID_TYPES.VIG_REPEAT) || (curVidType == VID_TYPES.TARGET_REPEAT);
-        responses.push(true);
-        handleCheck(wasRepeat, showFeedback=true);
+        handleCheck(wasRepeat, true, showFeedback=true);
       }
     }
 
