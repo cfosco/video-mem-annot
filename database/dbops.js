@@ -144,7 +144,7 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   }
 
   const levels = await pool.query('SELECT id FROM levels'
-    + ' WHERE id_user = ? ORDER BY id DESC LIMIT 1', userID);
+    + ' WHERE id_user = ? ORDER BY id DESC', userID);
   if (levels.length === 0) {
     throw new Error('User has no level in progress');
   }
