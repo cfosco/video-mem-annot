@@ -264,7 +264,7 @@ function showTask() {
       workerID: "demo-worker"
     }
   }).done(function (data) {
-    var vids = data.videos;
+    var vids = data.videos.slice(0, 6);
     for (var i = 0; i < vids.length; i++) {
       transcripts.push(BASE_PATH_VIDEOS + vids[i]["url"])
       types.push(vids[i]["type"])
