@@ -9,11 +9,18 @@ function randIntInRange(low, high) {
 
 function getSeqTemplate() {
     let nTemplates = 1000;
-    let templatesPath = "public/task_data/level_templates/";
     let templateNum = randIntInRange(0, nTemplates-1);
     let templateFile = "template_" + templateNum.toString() + ".json";
     try {
-        const template = JSON.parse(fs.readFileSync(path.join(templatesPath, templateFile), 'utf8'));
+        const templateFilePath = path.join(
+            __dirname,
+            '..',
+            'task_data',
+            'level_templates',
+            templateFile
+        );
+        const templateFileData = fs.readFileSync(templateFilePath, 'utf8');
+        const template = JSON.parse(templateFileData);
         return template;
     } catch (e) {
         debug(e);

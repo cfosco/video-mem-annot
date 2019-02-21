@@ -22,6 +22,7 @@ function showTask() {
   // populated in getJSON below
   var transcripts = [];
   var types = [];
+  var level = 0;
 
   // get DOM references
   var $progressBar = $("#progress-bar > .ui.progress");
@@ -264,7 +265,9 @@ function showTask() {
       workerID: "demo-worker"
     }
   }).done(function (data) {
-    var vids = data.videos.slice(0, 6);
+    var vids = data.videos;
+    level = data.level;
+    $('#level-num').html(level);
     for (var i = 0; i < vids.length; i++) {
       transcripts.push(BASE_PATH_VIDEOS + vids[i]["url"])
       types.push(vids[i]["type"])
