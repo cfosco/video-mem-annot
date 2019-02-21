@@ -49,6 +49,7 @@ var custom = {
     // }
 
     // config options
+    var SHOW_PLAY_PAUSE = false;
     var SHOW_PROGRESS = true;
     var SHOW_LIFE = false;
     var PLAY_SOUND = false;
@@ -192,8 +193,7 @@ var custom = {
           videoElements.shift();
           if (videoElements.length > 0) {
             videoElements[0].play();
-          }
-          else {
+          } else {
             $.post({
               "url": "api/end/",
               "data": JSON.stringify({ 
@@ -229,7 +229,6 @@ var custom = {
     		workerID: "demo-worker"
     	}
     }).done(function(data) {
-      console.log("data", data);
       var vids = data.videos;
       for (var i=0; i < vids.length; i++) {
         transcripts.push(BASE_PATH_VIDEOS + vids[i]["url"])
@@ -239,6 +238,9 @@ var custom = {
         newVideo(transcripts[counter], types[counter]);
       }
       updateLife();
+      if (!SHOW_PLAY_PAUSE) {
+        videoElements[0].play();
+      }
     });
 
     /************************Actions*********************/
@@ -246,20 +248,23 @@ var custom = {
     document.onkeydown = function (e) {
       if (e.keyCode == 32 || e.keyCode == 82) {
       	const curVidType = videoElements[0].dataset.vidType; 
-      	console.log("curVidType", curVidType);
         const wasRepeat = (curVidType == VID_TYPES.VIG_REPEAT) || (curVidType == VID_TYPES.TARGET_REPEAT);
         handleCheck(wasRepeat, true, showFeedback=true);
       }
     }
 
-
-    $('#playButton').click(function() {
-      videoElements[0].play();
-    });
-
-    $('#pauseButton').click(function() {
-      videoElements[0].pause();
-    });
+    if (SHOW_PLAY_PAUSE) {
+      $('#playButton').click(function() {
+        videoElements[0].play();
+      });
+  
+      $('#pauseButton').click(function() {
+        videoElements[0].pause();
+      });
+    } else {
+      $('#playButton').hide();
+      $('#pauseButton').hide();
+    }
 
     // hide instruction button
     // this button causes problems with the way we are loading videos

@@ -1,5 +1,4 @@
 const { pool, withinTX } = require('./database');
-const {getSeqTemplate } = require('../utils/sequence');
 
 const VID_TYPES = {
     TARGET_REPEAT: "target_repeat",
