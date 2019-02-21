@@ -30,3 +30,7 @@ html, body {
 .ui.label {
   margin-bottom: 5px;
 }
+
+#submit-button {
+  display: none;
+}
