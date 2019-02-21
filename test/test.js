@@ -6,15 +6,38 @@ const { getSeqTemplate } = require('../utils/sequence');
 const { getVideos, saveResponses } = require('../database/dbops');
 const assert = require('assert');
 
+// helper functions for use in tests
+
+async function getVidsAndMakeAnswers(user, correct=true) {
+    const urls = new Set();
+    const template = getSeqTemplate();
+    const videos = await getVideos(user, template);
+    const answers = videos["videos"].map(vid => {
+      const answer = urls.has(vid.url);
+      urls.add(vid.url);
+      if (!correct) {
+        return !answer;
+      }
+      return answer;
+    })
+    // sanity check
+    return answers;
+}
+
 beforeAll(async (done) => {
-  await Promise.all(['users', 'presentations', 'levels'].map(table =>
-    pool.query('DROP TABLE ' + table)
-      .catch(() => {}) // don't care
-  ));
+  // clears all the tables before running tests
+  for (let table of ['presentations', 'levels', 'users']) {
+    await pool.query('DROP TABLE ' + table)
+      .catch((e) => {
+        debug("error dropping table", e);
+      }) // don't care
+  }
   await initDB();
   done();
 }, 10000);
 
+
+// tests
 describe('Test get sequence template', () => {
   test('It should have correct form', () => {
     const [nTargets, nFillers, ordering] = getSeqTemplate();
@@ -60,23 +83,82 @@ describe('Test get videos', () => {
 
 describe('Test save answers', () => {
   test('It should save the answers', async (done) => {
-    const urls = new Set();
-    const template = getSeqTemplate();
-    const videos = await getVideos('test3', template);
-    const answers = videos["videos"].map(vid => {
-      const answer = urls.has(vid.url);
-      urls.add(vid.url);
-      return answer;
-    })
+    const username = 'test3';
+    const answers = await getVidsAndMakeAnswers(username);
     const {
       overallScore,
       vigilanceScore,
+      numLives,
       completedLevels
-    } = await saveResponses('test3', answers);
+    } = await saveResponses(username, answers);
     expect(overallScore).toEqual(1);
+    expect(numLives).toEqual(2);
     expect(vigilanceScore).toEqual(1);
     expect(completedLevels).toHaveLength(1);
     expect(completedLevels[0].score).toEqual(1);
+    done();
+  });
+});
+
+describe('Test lives increment when correct', () => {
+  test('Lives should increment at 50', async (done) => {
+    const username = 'testLivesInc';
+    for (let i = 0; i < 3; i++) {
+        const answers = await getVidsAndMakeAnswers(username);
+        const {
+          overallScore,
+          vigilanceScore,
+          numLives,
+          completedLevels
+        } = await saveResponses(username, answers, levelsPerLife=3);
+        if (i == 2) {
+            expect(numLives).toEqual(3);
+        } else {
+            expect(numLives).toEqual(2);
+        }
+    }
+    done();
+  });
+});
+
+describe('Test failure on first round', () => {
+  test('Failure on first round should produce 0 lives', async (done) => {
+    const username = 'testFailFirst';
+    wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      completedLevels
+    } = await saveResponses(username, wrongAnswers);
+    expect(numLives).toEqual(0);
+    done();
+  })
+});
+
+describe('Test failure on later rounds', () => {
+  test('Failure on later rounds should decrement lives', async (done) => {
+    const username = 'testFailLater';
+    const rightAnswers = await getVidsAndMakeAnswers(username);
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      completedLevels
+    } = await saveResponses(username, rightAnswers);
+    expect(numLives).toEqual(2);
+    var finalLives;
+    for (let i = 0; i < 2; i++) {
+      const wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+      const {
+        overallScore,
+        vigilanceScore,
+        numLives,
+        completedLevels
+      } = await saveResponses(username, wrongAnswers);
+      finalLives = numLives;
+    }
+    expect(finalLives).toEqual(0);
     done();
   });
 });
@@ -91,9 +173,6 @@ describe('Test game start', () => {
         const { body: vidData } = res;
         // check it returns some vids
         assert(vidData.videos.length > 1);
-        //expect(vidData.videos.length).toBe.greaterThan(1);
-        //expect(sequence.length).toBe(100);
-        //expect((new Set(sequence)).size).toBe(75);
         done();
       });
   });
@@ -116,6 +195,7 @@ describe('Test game end', () => {
       .expect(200, {
         overallScore: 1,
         vigilanceScore: 1,
+        numLives: 2,
       })
       .end((err, res) => {
         done();
