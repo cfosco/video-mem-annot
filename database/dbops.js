@@ -109,16 +109,16 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   // get the most recent level (TODO: validate we should do this)
   const userID = await getUser(workerID);
   const levels = await pool.query('SELECT id FROM levels'
-    + ' WHERE id_user = ? ORDER BY id DESC', userID);
+    + ' WHERE id_user = ? ORDER BY id DESC LIMIT 1', userID);
   if (levels.length === 0) {
     throw new Error('User has no level in progress');
   }
+  levelID = levels[0].id;
 
   // check that answers have not already been given
-  levelID = levels[0].id;
   const pastResponses = await pool.query('SELECT response FROM presentations'
-    + ' WHERE id_level = ? AND response IS NOT NULL', levelID);
-  if (pastResponses.length !== 0) {
+    + ' WHERE id_level = ? AND response IS NOT NULL LIMIT 1', levelID);
+  if (pastResponses.length > 0) {
     throw new Error('User has no level in progress');
   }
 

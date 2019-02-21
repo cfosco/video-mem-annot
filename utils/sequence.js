@@ -8,17 +8,16 @@ function randIntInRange(low, high) {
 }
 
 function getSeqTemplate() {
-    let nTemplates = 1000;
-    let templateNum = randIntInRange(0, nTemplates-1);
-    let templateFile = "template_" + templateNum.toString() + ".json";
+    const dirName = process.env.USE_SHORT_SEQUENCE == 'true'
+        ? 'short_level_templates'
+        : 'level_templates';
     try {
-        const templateFilePath = path.join(
-            __dirname,
-            '..',
-            'task_data',
-            'level_templates',
-            templateFile
-        );
+        const dirPath = path.join(__dirname, '..', 'task_data', dirName);
+        const files = fs.readdirSync(dirPath).filter((f) => f.endsWith('.json'));
+        let templateNum = randIntInRange(0, files.length-1);
+        let templateFile = files[templateNum];
+        const templateFilePath = path.join(dirPath, templateFile);
+        debug(`Using template ${templateFilePath}`);
         const templateFileData = fs.readFileSync(templateFilePath, 'utf8');
         const template = JSON.parse(templateFileData);
         return template;
