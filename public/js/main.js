@@ -114,6 +114,13 @@
       if (data.level === 1) {
         demoSurvey.showTask();
         data.level = -1;
+      } else if (data.level === -1) {
+        if (demoSurvey.validateTask() === false) {
+          // TODO: send survey data to server
+          submitHIT();
+        } else {
+          generateMessage('negative', 'Please complete the survey.');
+        }
       } else {
         submitHIT();
       }

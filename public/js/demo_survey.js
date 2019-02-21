@@ -8,7 +8,8 @@ var demoSurvey = {
 		$('#demo-survey').hide();
 	},
 	showTask: function() {
-		$('#custom-experiment').hide();
+        $('#custom-experiment').hide();
+        $('#endGame').hide();
 		$('#demo-survey').show();
 
         // Rules for collecting demographic survey data
