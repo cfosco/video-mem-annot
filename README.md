@@ -12,6 +12,10 @@ You need to add MySQL database credentials by setting the environment variables 
 
 Jupyter notebooks in the `mturk` folder are provided for launching and monitoring HITs. Edit the `hitCreation` fields in `config.json` to define how to set up your HITs.
 
+#### Dev Environment Variables
+- Set `DEBUG` to `memento:server` to get additional logs
+- Set `USE_SHORT_SEQUENCE` to `true` to get a very short sequence
+
 ### UI Customization
 This framework can be used to create MTurk HITs, broken up into discrete repeated subtasks.
 
