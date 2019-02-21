@@ -3,7 +3,7 @@ const app = require('../app');
 const debug = require('debug')('memento:server');
 const { pool, initDB } = require('../database/database');
 const { getSeqTemplate } = require('../utils/sequence');
-const { getVideos, saveResponses } = require('../database/dbops');
+const { getVideos, saveResponses, BlockedError } = require('../database/dbops');
 const assert = require('assert');
 // helper functions for use in tests
 
@@ -28,6 +28,16 @@ async function getVidsAndMakeAnswers(user, correct=true) {
     const urls = new Set();
     const {videos, level} = await getVideos(user, template);
     return calcAnswers(videos, correct);
+}
+
+async function checkThrowsError(asyncFunc, errorClass) {
+    let error;
+    try {
+        await asyncFunc();
+    } catch (e) {
+        error = e;
+    }
+    expect(error).toBeInstanceOf(errorClass);
 }
 
 beforeAll(async (done) => {
@@ -157,6 +167,15 @@ describe('Test failure on first round', () => {
     } = await saveResponses(username, wrongAnswers);
     expect(numLives).toEqual(0);
     expect(passed).toBe(false);
+
+    await checkThrowsError(async () => {
+        await getVideos(username, getSeqTemplate());
+    }, BlockedError);
+
+    await checkThrowsError(async() => {
+        await saveResponses(username, []);
+    }, BlockedError);
+
     done();
   })
 });
@@ -186,6 +205,14 @@ describe('Test failure on later rounds', () => {
       finalLives = numLives;
     }
     expect(finalLives).toEqual(0);
+    await checkThrowsError(async () => {
+        await getVideos(username, getSeqTemplate());
+    }, BlockedError);
+    
+    await checkThrowsError(async() => {
+        await saveResponses(username, []);
+    }, BlockedError);
+
     done();
   });
 });
@@ -206,21 +233,78 @@ describe('Test game start', () => {
   });
 });
 
+describe('Test game start blocked user', () => {
+  test('start should throw 403', async (done) => {
+    const username = 'startBlocked';
+    // block the user
+    const wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses(username, wrongAnswers);
+    expect(numLives).toBe(0);
+    request(app)
+      .post('/api/start')
+      .send({ workerID: username})
+      .expect(403)
+      .end((err, res) => {
+        if (err) return done(err); 
+        done();
+      });
+  });
+});
+
 describe('Test game end', () => {
   test('It should return the scores', async (done) => {
     const template = getSeqTemplate();
     const {videos, level} = await getVideos('test5', template);
     const answers = calcAnswers(videos, correct=true);
     request(app)
-      .post('/api/start')
+      .post('/api/end')
       .send({ workerID: 'test5', responses: answers})
-      .expect(200, {
-        overallScore: 1,
-        vigilanceScore: 1,
-        passed: true,
-        numLives: 2,
-      })
+      .expect(200)
       .end((err, res) => {
+        if (err) return done(err); 
+        const {
+            overallScore,
+            vigilanceScore,
+            passed,
+            numLives,
+            completedLevels
+        } = res.body;
+        expect(overallScore).toBe(1);
+        expect(vigilanceScore).toBe(1);
+        expect(passed).toBe(true);
+        expect(numLives).toBe(2);
+        expect(completedLevels.length).toBe(1);
+        done();
+      })
+  });
+});
+
+describe('Test game end blocked user', () => {
+  test('Game end should return 403', async (done) => {
+    const username = 'endBlocked';
+    // block the user
+    const wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses(username, wrongAnswers);
+    expect(numLives).toBe(0);
+ 
+    request(app)
+      .post('/api/end')
+      .send({ workerID: username, responses: []})
+      .expect(403)
+      .end((err, res) => {
+        if (err) return done(err); 
         done();
       });
   });

@@ -15,11 +15,36 @@ const didPassLevel = function(overallScore, vigilanceScore) {
    return overallScore > .75 && vigilanceScore > .9; 
 }
 
+// Errors to be used in the API
+class BlockedError extends Error { 
+    constructor(username) {
+        const message = "User " + username + " has been blocked."
+        super(message);
+        this.name = "BlockedError";
+    }
+}
+
+class UnauthenticatedError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "UnauthenticatedError";
+    }
+}
+
+class OutOfVidsError extends Error {
+    constructor(username) {
+        const message = "User " + username + " is out of videos.";
+        super(message);
+        this.name = "OutOfVidsError";
+    }
+}
+
 /**
  * @param {string} workerID
  * @return {Promise<number>} userID
  */
 async function getUser(workerID) {
+  // this returns just the id bc an INSERT does not return the whole user
   let userID;
   const users = await pool.query('SELECT id FROM users WHERE worker_id = ?', workerID);
   if (users.length === 0) {
@@ -41,6 +66,11 @@ async function getVideos(workerID, seqTemplate) {
   const numVideos = nTargets + nFillers;
 
   const userID = await getUser(workerID);
+  const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
+  const user = result[0];
+  if (user.num_lives < 1) {
+    throw new BlockedError(user.worker_id);
+  }
 
   // get N least-seen videos user hasn't seen yet
   const vidsToShow = await pool.query('SELECT id, uri'
@@ -107,6 +137,12 @@ async function getVideos(workerID, seqTemplate) {
 async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW_LIFE) {
   // get the most recent level (TODO: validate we should do this)
   const userID = await getUser(workerID);
+  const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
+  const user = result[0];
+  if (user.num_lives < 1) {
+    throw new BlockedError(user.worker_id);
+  }
+
   const levels = await pool.query('SELECT id FROM levels'
     + ' WHERE id_user = ? ORDER BY id DESC LIMIT 1', userID);
   if (levels.length === 0) {
@@ -188,5 +224,6 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
 
 module.exports = {
   getVideos,
-  saveResponses
+  saveResponses, 
+  BlockedError
 };
