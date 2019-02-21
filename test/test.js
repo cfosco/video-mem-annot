@@ -9,7 +9,7 @@ const assert = require('assert');
 
 function calcAnswers(videos, correct) {
   const urls = new Set();
-  return videos.map(vid => {
+  const answers = videos.map(vid => {
     const answer = urls.has(vid.url);
     urls.add(vid.url);
     if (!correct) {
@@ -17,6 +17,10 @@ function calcAnswers(videos, correct) {
     }
     return answer;
   });
+  return answers.map((response) => ({
+    response,
+    time: Math.random() * 3
+  }));
 }
 
 async function getVidsAndMakeAnswers(user, correct=true) {

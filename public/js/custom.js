@@ -161,7 +161,10 @@ function showTask(taskData) {
   function handleCheck(response, showFeedback) {
     if (checked) return;
 
-    responses.push(response);
+    responses.push({
+      response,
+      time: videoElements[0].currentTime
+    });
     var right = isRepeat() === response;
     checked = true;
 

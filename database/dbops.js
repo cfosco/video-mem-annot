@@ -1,5 +1,4 @@
 const { pool, withinTX } = require('./database');
-const {getSeqTemplate } = require('../utils/sequence');
 const debug = require('debug')('memento:server');
 
 const VID_TYPES = {
@@ -128,10 +127,10 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   var passed;
   await withinTX(async (connection) => {
     // update db with answers
-    const updates = responses.map((response, position) =>
+    const updates = responses.map(({ response, time }, position) =>
       connection.query(
-        'UPDATE presentations SET response = ? WHERE position = ? AND id_level = ?',
-        [response, position, levelID]
+        'UPDATE presentations SET response = ?, seconds = ? WHERE position = ? AND id_level = ?',
+        [response, time, position, levelID]
       )
     );
 
