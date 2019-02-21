@@ -45,6 +45,10 @@ class OutOfVidsError extends Error {
  */
 async function getUser(workerID) {
   // this returns just the id bc an INSERT does not return the whole user
+  if (!workerID) {
+    throw new UnauthenticatedError("workerId '" + workerID + "' is not valid");
+  }
+
   let userID;
   const users = await pool.query('SELECT id FROM users WHERE worker_id = ?', workerID);
   if (users.length === 0) {
@@ -225,5 +229,6 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
 module.exports = {
   getVideos,
   saveResponses, 
-  BlockedError
+  BlockedError,
+  UnauthenticatedError
 };

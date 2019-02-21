@@ -3,7 +3,12 @@ const app = require('../app');
 const debug = require('debug')('memento:server');
 const { pool, initDB } = require('../database/database');
 const { getSeqTemplate } = require('../utils/sequence');
-const { getVideos, saveResponses, BlockedError } = require('../database/dbops');
+const { 
+    getVideos, 
+    saveResponses, 
+    BlockedError,
+    UnauthenticatedError 
+} = require('../database/dbops');
 const assert = require('assert');
 // helper functions for use in tests
 
@@ -111,6 +116,23 @@ describe('Test increasing levels', () => {
   });
 });
 
+describe('Test dbOps with invalid user', () => {
+    const badUser = "";
+    test('getVideos should throw error', async (done) => {
+        await checkThrowsError(async() => {
+            await getVideos(badUser, getSeqTemplate());
+        }, UnauthenticatedError);
+        done();
+    });
+
+    test('saveResponses should throw error', async (done) => {
+        await checkThrowsError(async() => {
+            await saveResponses(badUser, []);
+        }, UnauthenticatedError);
+        done();
+    });
+});
+
 describe('Test save answers', () => {
   test('It should save the answers', async (done) => {
     const username = 'test3';
@@ -135,7 +157,7 @@ describe('Test save answers', () => {
 describe('Test lives increment when correct', () => {
   test('Lives should increment at levelsPerLife', async (done) => {
     const username = 'testLivesInc';
-    for (let i = 0; i < 3; i++) {
+    for (let i = 1; i <= 5; i++) {
         const answers = await getVidsAndMakeAnswers(username);
         const {
           overallScore,
@@ -144,7 +166,7 @@ describe('Test lives increment when correct', () => {
           passed,
           completedLevels
         } = await saveResponses(username, answers, levelsPerLife=3);
-        if (i == 2) {
+        if (i >= 3) {
             expect(numLives).toEqual(3);
         } else {
             expect(numLives).toEqual(2);
@@ -308,4 +330,28 @@ describe('Test game end blocked user', () => {
         done();
       });
   });
+});
+
+describe('Test API invalid user', () => {
+  test('Game start with invalid user should return 401', async (done) => {
+    request(app)
+      .post('/api/start')
+      .send({ workerID: ""})
+      .expect(401)
+      .end((err, res) => {
+        if (err) return done(err); 
+        done();
+      });
+    });
+
+    test('Game end with invalid user should return 401', async (done) => {
+      request(app)
+        .post('/api/end')
+        .send({ workerID: "", responses: []})
+        .expect(401)
+        .end((err, res) => {
+          if (err) return done(err); 
+          done();
+        });
+    });
 });

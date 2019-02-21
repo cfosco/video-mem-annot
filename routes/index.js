@@ -1,5 +1,10 @@
 const express = require('express');
-const { getVideos, saveResponses, BlockedError } = require('../database/dbops');
+const { 
+    getVideos, 
+    saveResponses, 
+    BlockedError, 
+    UnauthenticatedError
+} = require('../database/dbops');
 const { getSeqTemplate } = require('../utils/sequence');
 
 const router = express.Router();
@@ -11,6 +16,8 @@ const router = express.Router();
 function respondToError(err, res) {
     if (err instanceof BlockedError) {
         res.send(403, err.message);
+    } else if (err instanceof UnauthenticatedError) {
+        res.send(401, err.message);
     } else {
         res.send(500);
     }

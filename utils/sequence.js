@@ -17,7 +17,6 @@ function getSeqTemplate() {
         let templateNum = randIntInRange(0, files.length-1);
         let templateFile = files[templateNum];
         const templateFilePath = path.join(dirPath, templateFile);
-        debug(`Using template ${templateFilePath}`);
         const templateFileData = fs.readFileSync(templateFilePath, 'utf8');
         const template = JSON.parse(templateFileData);
         return template;
