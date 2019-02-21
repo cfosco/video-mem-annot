@@ -1,5 +1,6 @@
 const { pool, withinTX } = require('./database');
 const {getSeqTemplate } = require('../utils/sequence');
+const debug = require('debug')('memento:server');
 
 const VID_TYPES = {
     TARGET_REPEAT: "target_repeat",
@@ -7,6 +8,12 @@ const VID_TYPES = {
     VIG: "vig",
     TARGET: "target",
     FILLER: "filler",
+}
+
+const N_LEVELS_PER_NEW_LIFE = 50;
+
+const didPassLevel = function(overallScore, vigilanceScore) {
+   return overallScore > .75 && vigilanceScore > .9; 
 }
 
 /**
@@ -97,11 +104,11 @@ async function getVideos(workerID, seqTemplate) {
  * @param {Promise<{overallScore: number, vigilanceScore: number, completedLevels: {score: number, reward: number}[]}>}
  * scores are between 0 and 1; reward is (TODO) a dollar value
  */
-async function saveResponses(workerID, responses) {
+async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW_LIFE) {
   // get the most recent level (TODO: validate we should do this)
   const userID = await getUser(workerID);
   const levels = await pool.query('SELECT id FROM levels'
-    + ' WHERE id_user = ? ORDER BY id DESC LIMIT 1', userID);
+    + ' WHERE id_user = ? ORDER BY id DESC', userID);
   if (levels.length === 0) {
     throw new Error('User has no level in progress');
   }
@@ -114,30 +121,57 @@ async function saveResponses(workerID, responses) {
     throw new Error('User has no level in progress');
   }
 
-  // update db with answers
+  var numLives;
+  var overallScore;
+  var vigilanceScore;
   await withinTX(async (connection) => {
+    // update db with answers
     const updates = responses.map((response, position) =>
       connection.query(
         'UPDATE presentations SET response = ? WHERE position = ? AND id_level = ?',
         [response, position, levelID]
       )
     );
-    await Promise.all(updates);
-  });
 
-  // calculate score
-  const presentations = await pool.query('SELECT response, duplicate, vigilance'
-    + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
-  const right = (p) => p.response === p.duplicate;
-  const numAll = presentations.length;
-  const numRight = presentations.filter(right).length;
-  const vigilancePresentations = presentations.filter(p => p.vigilance);
-  const numVig = vigilancePresentations.length;
-  const numVigRight = vigilancePresentations.filter(right).length;
-  const overallScore = numRight / numAll;
-  const vigilanceScore = numVigRight / numVig;
-  await pool.query('UPDATE levels SET score = ? WHERE id = ?', [overallScore, levelID]);
-  // TODO: add reward
+    await Promise.all(updates);
+
+    // calculate score
+    const presentations = await connection.query('SELECT response, duplicate, vigilance'
+      + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
+    const right = (p) => p.response === p.duplicate;
+    const numAll = presentations.length;
+    const numRight = presentations.filter(right).length;
+    const vigilancePresentations = presentations.filter(p => p.vigilance);
+    const numVig = vigilancePresentations.length;
+    const numVigRight = vigilancePresentations.filter(right).length;
+    overallScore = numRight / numAll;
+    vigilanceScore = numVigRight / numVig;
+    const passed = didPassLevel(overallScore, vigilanceScore);
+    await connection.query('UPDATE levels SET score = ? WHERE id = ?', [overallScore, levelID]);
+    // TODO: add reward
+
+    // check num lives
+    const livesQuery = await connection.query('SELECT num_lives FROM users WHERE id = ?', userID);
+    const oldLives = livesQuery[0].num_lives;
+    numLives = oldLives;
+    if (levels.length == 1) { 
+        if (passed) {
+            numLives++;
+        } else {
+            numLives--;
+        }
+    } else {
+        if (levels.length % levelsPerLife == 0) {
+            numLives++;
+        }
+        if (!passed) {
+            numLives--;
+        }
+    }
+    if (numLives != oldLives) {
+        await connection.query('UPDATE users SET num_lives = ? WHERE id = ?', [numLives, userID]);
+    }
+  });
 
   const completedLevels = await pool.query('SELECT score, reward FROM levels'
     + ' WHERE id_user = ? AND score IS NOT NULL ORDER BY id ASC', userID);
@@ -145,6 +179,7 @@ async function saveResponses(workerID, responses) {
   return {
     overallScore,
     vigilanceScore,
+    numLives,
     completedLevels,
   }
 }

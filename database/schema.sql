@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS users (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  worker_id VARCHAR(15) UNIQUE NOT NULL
+  worker_id VARCHAR(15) UNIQUE NOT NULL,
+  num_lives INT DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS videos (
@@ -30,3 +31,5 @@ CREATE TABLE IF NOT EXISTS presentations (
   response BOOLEAN,
   seconds DECIMAL(5,4)
 );
+
+
