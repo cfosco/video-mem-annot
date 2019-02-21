@@ -41,33 +41,34 @@ async function getVideos(workerID, seqTemplate) {
   const [nTargets, nFillers, ordering] = seqTemplate;
   const numVideos = nTargets + nFillers;
 
-  // numVideos = largest index in sequence + 1 (since 0 is the first index)
-  //const numVideos = Math.max(...sequence.map(([i]) => i)) + 1;
-
   const userID = await getUser(workerID);
 
   // get N least-seen videos user hasn't seen yet
-  const videos = await pool.query('SELECT id, uri'
+  const vidsToShow = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
     + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
     + ' ORDER BY labels ASC LIMIT ?',
     [userID, numVideos]
   );
-  if (videos.length < numVideos) {
+  if (vidsToShow.length < numVideos) {
     throw new Error('No more videos for user.');
   }
+  
+  const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
+    + 'WHERE id_user = ? AND score IS NOT NULL'
+  , userID);
+  const level = levels[0].levelsCount + 1;
 
   // create a level
   await withinTX(async (connection) => {
     const result = await connection.query('INSERT INTO levels (id_user) VALUES (?)', userID);
     const levelID = result.insertId;
 
-    addedIndexes = new Set(); // mark duplicate when we add the same index a second time
     const presentationInserts = ordering.map(([index, type], position) => {
       const vigilance = type == VID_TYPES.VIG || type == VID_TYPES.VIG_REPEAT;
       const duplicate = type == VID_TYPES.VIG_REPEAT || type == VID_TYPES.TARGET_REPEAT;
       const targeted = type == VID_TYPES.TARGET || type == VID_TYPES.TARGET_REPEAT;
-      return [levelID, videos[index].id, position, vigilance, duplicate, targeted];
+      return [levelID, vidsToShow[index].id, position, vigilance, duplicate, targeted];
     })
     // position: index into the vid seq shown to user
     // vigilance: was this a 1st or 2nd repeat of a vig video? 
@@ -82,20 +83,20 @@ async function getVideos(workerID, seqTemplate) {
     const promises = ordering
       .filter(([index, type]) => type === VID_TYPES.TARGET)
       .map(([index]) => connection.query('UPDATE videos SET labels = labels + 1'
-        + ' WHERE id = ?', videos[index].id)
+        + ' WHERE id = ?', vidsToShow[index].id)
       );
 
     promises.push(bulkInsertPromise);
     await Promise.all(promises);
   });
   
-  const vidData = ordering.map(([index, type]) => {
+  const videos = ordering.map(([index, type]) => {
     return {
-        "url": videos[index].uri,
+        "url": vidsToShow[index].uri,
         "type": type
     }
   });
-  return {"videos": vidData};
+  return {level, videos};
 }
 
 /**
