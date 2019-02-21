@@ -1,5 +1,15 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html, body {
   height: initial;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 #page-title {
@@ -33,4 +43,21 @@ html, body {
 
 #submit-button {
   display: none;
+}
+
+#app {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100%;
+}
+
+#instructions {
+  flex: 1;
+  margin: 0;
+}
+
+#disclaimer-box {
+  margin-top: auto;
+  border-top: 1px solid lightgray;
 }

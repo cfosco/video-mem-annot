@@ -172,12 +172,13 @@ function showTask() {
       }
 
       if (SHOW_FLASH) {
+        // clear the old anim value
         $mainInterface.css('animation', 'none');
-        // timeout is necessary to get anim to show
-        setTimeout(function () {
-          var val = (right ? 'right' : 'wrong') + ' 0.5s';
-          $mainInterface.css('animation', val);
-        });
+        // trigger a "reflow" to get the anim to reset
+        void $mainInterface.css('animation');
+        // set the new anim value
+        var val = (right ? 'right' : 'wrong') + ' 0.5s';
+        $mainInterface.css('animation', val);
       }
     }
   }
