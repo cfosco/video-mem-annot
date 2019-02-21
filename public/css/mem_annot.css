@@ -58,31 +58,24 @@ we do this by having a smaller container with hidden overflow */
   display: initial;
 }
 
-#life-bar {
-  float: right;
-  width: 270px;
-  -webkit-transform-origin: right;
-  -webkit-transform: rotate(-90deg);
-  -moz-transform-origin: right;
-  -moz-transform: rotate(-90deg);
-  -ms-transform-origin: right;
-  -ms-transform: rotate(-90deg);
-  transform-origin: right;
-  transform: rotate(-90deg);
-  position: relative;
-  display: none; /* gets overridden in js */
-}
-
-#life-bar > .ui.progress {
-  margin-bottom: 0;
-  top: 16px;
-  left: -6px;
-}
-
 #progress-bar {
   width: 480px;
   margin-top: 10px;
   margin-right: auto;
+}
+
+#score-box {
+  margin-top: 20px;
+  background-color: lightgray;
+  display: inline-block;
+  align-items: center;
+  padding: 20px 40px;
+  border-radius: 10px;
+}
+
+.graphs {
+  display: flex;
+  flex-flow: wrap;
 }
 
 

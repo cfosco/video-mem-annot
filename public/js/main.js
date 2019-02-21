@@ -1,124 +1,31 @@
-const MTURK_SUBMIT = "https://www.mturk.com/mturk/externalSubmit";
-const SANDBOX_SUBMIT = "https://workersandbox.mturk.com/mturk/externalSubmit";
+// populated from query
+var assignmentId;
+var workerId;
+var submitUrl;
 
+// populated via request
 var config = {};
 
-var state = {
-    taskIndex: gup("skipto") ? parseInt(gup("skipto")) : 0,
-    taskInputs: {},
-    taskOutputs: [],
-    assignmentId: gup("assignmentId"),
-    workerId: gup("workerId"),
-};
-
-/* HELPERS */
-function saveTaskData() {
-    var data;
-    if (isDemoSurvey()) {
-        data = demoSurvey.collectData();
-    } else {
-        data = custom.collectData(getTaskInputs(state.taskIndex), state.taskIndex, getTaskOutputs(state.taskIndex));
+/**
+ * Gets the values from the URL query string that we need
+ */
+function getURLParams() {
+    // this is an advanced feature but it is polyfilled
+    var urlParams = new URLSearchParams(window.location.search);
+    let submitDomain = urlParams.get('turkSubmitTo') || 'https://www.mturk.com/';
+    if (!submitDomain.endsWith('/')) {
+        submitDomain += '/';
     }
-    if (config.meta.aggregate) {
-        $.extend(state.taskOutputs, data);
-    } else {
-        // TODO: figure out how best to include the demo survey data in the results?
-        state.taskOutputs[state.taskIndex] = data;
-    }
+    submitUrl = submitDomain + 'mturk/externalSubmit';
+    assignmentId = urlParams.get('assignmentId') || 'ASSIGNMENT_ID_NOT_AVAILABLE';
+    workerId = urlParams.get('workerId') || 'test-worker';
 }
 
-function getTaskInputs(i) {
-    return config.meta.aggregate ? state.taskInputs : state.taskInputs[i];
-}
-
-function getTaskOutputs(i) {
-    return config.meta.aggregate ? state.taskOutputs : state.taskOutputs[i];
-}
-
-function updateTask() {
-    if (config.advanced.hideIfNotAccepted && hideIfNotAccepted()) {
-        return;
-    }
-    // $("#progress-bar").progress("set progress", state.taskIndex + 1);
-    if (isDemoSurvey()) {
-        demoSurvey.showTask();
-    } else {
-        // show the user's task
-        demoSurvey.hideSurvey();
-        $('#custom-experiment').show();
-        custom.showTask(getTaskInputs(state.taskIndex), state.taskIndex, getTaskOutputs(state.taskIndex));
-    }
-    if (state.taskIndex == config.meta.numSubtasks + config.advanced.includeDemographicSurvey - 1) {
-        // last page
-        $("#next-button").addClass("disabled");
-        if (state.taskIndex != 0) {
-            $("#prev-button").removeClass("disabled");
-        } else {
-            $("#prev-button").addClass("disabled");
-        }
-        $("#submit-button").removeClass("disabled");
-        $("#final-task-fields").css("display", "block");
-    } else if (state.taskIndex == 0) {
-        // first page
-        $("#next-button").removeClass("disabled");
-        $("#prev-button").addClass("disabled");
-        $("#submit-button").addClass("disabled");
-        $("#final-task-fields").css("display", "none");
-    } else {
-        // intermediate page
-        $("#next-button").removeClass("disabled");
-        $("#prev-button").removeClass("disabled");
-        $("#submit-button").addClass("disabled");
-        $("#final-task-fields").css("display", "none");
-    }
-}
-
-function nextTask() {
-    if (state.taskIndex < (config.meta.numSubtasks + config.advanced.includeDemographicSurvey) - 1) {
-        saveTaskData();
-
-        var failedValidation;
-        if (isDemoSurvey()) {
-            failedValidation = demoSurvey.validateTask();
-        } else {
-            failedValidation = custom.validateTask(getTaskInputs(state.taskIndex), state.taskIndex, getTaskOutputs(state.taskIndex));
-        }
-
-        if (failedValidation) {
-            generateMessage("negative", failedValidation.errorMessage);
-        } else {
-            state.taskIndex++;
-            updateTask();
-            clearMessage();
-            console.log("Current collected data", state.taskOutputs);
-        }
-    }
-}
-
-function prevTask() {
-    if (state.taskIndex > 0) {
-        saveTaskData();
-        state.taskIndex--;
-        updateTask();
-    }
-}
-
-function toggleInstructions() {
-    if ($("#experiment").css("display") == "none") {
-        $("#experiment").css("display", "flex");
-        $("#instructions").css("display", "none");
-        updateTask();
-    } else {
-        saveTaskData();
-        $("#experiment").css("display", "none");
-        $("#instructions").css("display", "flex");
-    }
-}
-
-function clearMessage() {
-    $("#message-field").html("");
-}
-
+/**
+ * Show a message to the user on the page
+ * @param {string} cls class to include in the containing tag
+ * @param {string} header the actual message text
+ */
 function generateMessage(cls, header) {
     clearMessage();
     if (!header) return;
@@ -133,6 +40,17 @@ function generateMessage(cls, header) {
     });
 }
 
+/**
+ * Remove the message shown by generateMessage
+ */
+function clearMessage() {
+    $("#message-field").html("");
+}
+
+/**
+ * Adds a hidden input to a form
+ * Exists because we need to submit via a form element
+ */
 function addHiddenField(form, name, value) {
     // form is a jQuery object, name and value are strings
     var input = $("<input type='hidden' name='" + name + "' value=''>");
@@ -140,51 +58,10 @@ function addHiddenField(form, name, value) {
     form.append(input);
 }
 
-function submitHIT() {
-    var submitUrl = config.hitCreation.production ? MTURK_SUBMIT : SANDBOX_SUBMIT;
-    if (config.advanced.externalSubmit) {
-        submitUrl = config.advanced.externalSubmitUrl;
-    }
-    saveTaskData();
-    clearMessage();
-    $("#submit-button").addClass("loading");
-    for (var i = 0; i < config.meta.numSubtasks; i++) {
-        var failedValidation = custom.validateTask(getTaskInputs(i), i, getTaskOutputs(i));
-        if (failedValidation) {
-            cancelSubmit(failedValidation.errorMessage);
-            return;
-        }
-    }
-    if (config.advanced.includeDemographicSurvey) {
-        var failedValidation = demoSurvey.validateTask();
-        if (failedValidation) {
-            cancelSubmit(failedValidation.errorMessage);
-            return;
-        }
-    }
-
-    if (config.advanced.externalSubmit) {
-        externalSubmit(submitUrl);
-    } else {
-        mturkSubmit(submitUrl);
-    }
-}
-
-function cancelSubmit(err) {
-    $("#submit-button").removeClass("loading");
-    generateMessage("negative", err);
-}
-
-function gup(name) {
-    var regexS = "[\\?&]"+name+"=([^&#]*)";
-    var regex = new RegExp( regexS );
-    var tmpURL = window.location.href;
-    var results = regex.exec( tmpURL );
-    if (results == null) return "";
-    else return results[1];
-}
-
-/* SETUP FUNCTIONS */
+/**
+ * Reads data from the config to show the instructions & disclaimer
+ * @param {object} config 
+ */
 function populateMetadata(config) {
     $(".meta-title").html(config.meta.title);
     $(".meta-desc").html(config.meta.description);
@@ -201,89 +78,40 @@ function populateMetadata(config) {
         $("#instructions-demo").append($(imgEle));
 
     }
-    // $("#progress-bar").progress({
-    //     total: config.meta.numSubtasks + config.advanced.includeDemographicSurvey,
-    // });
 }
 
+/**
+ * Hide the instructions and start the task
+ */
+function startTask() {
+    $('#custom-experiment').show();
+    $("#experiment").css("display", "flex");
+    $("#instructions").css("display", "none");
+    showTask(); // from custom.js
+}
+
+/**
+ * Add click handlers to buttons, start and submit
+ */
 function setupButtons() {
-    $("#next-button").click(nextTask);
-    $("#prev-button").click(prevTask);
-    $(".instruction-button").click(toggleInstructions);
+    $("#start-button").click(startTask);
     $("#submit-button").click(submitHIT);
-    if (state.assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE") {
+    if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE") {
         $("#submit-button").remove();
     }
 }
 
-/* USEFUL HELPERS */
+/**
+ * Submit the HIT to MTurk
+ */
+function submitHIT() {
+    clearMessage();
+    $("#submit-button").addClass("loading");
 
-function isDemoSurvey() {
-    var useSurvey = config.advanced.includeDemographicSurvey;
-    var lastTask = state.taskIndex == config.meta.numSubtasks + config.advanced.includeDemographicSurvey -1;
-    return useSurvey && lastTask;
-}
-
-// Hides the task UI if the user is working within an MTurk iframe and has not accepted the task
-// Returns true if the task was hidden, false otherwise
-function hideIfNotAccepted() {
-    if (state.assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE") {
-        console.log("Hiding if not accepted");
-        $('#experiment').hide();
-        $("#hit-not-accepted").show();
-        return true;
-    }
-    return false;
-}
-
-// Code to show the user's validation code; only used if task is configured as an external link
-function showSubmitKey(key) {
-    $('#submit-code').text(key);
-    $('#experiment').hide();
-    $('#succesful-submit').show();
-    selectText('submit-code');
-}
-
-// highlights/selects text within an html element
-// copied from:
-// https://stackoverflow.com/questions/985272/selecting-text-in-an-element-akin-to-highlighting-with-your-mouse
-function selectText(node) {
-    node = document.getElementById(node);
-
-    if (document.body.createTextRange) {
-        const range = document.body.createTextRange();
-        range.moveToElementText(node);
-        range.select();
-    } else if (window.getSelection) {
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        selection.removeAllRanges();
-        selection.addRange(range);
-    } else {
-        console.warn("Could not select text in node: Unsupported browser.");
-    }
-}
-
-/* SUBMIT FUNCTIONS */
-
-// submit to MTurk as a back-end. MTurk only accepts form submissions and frowns
-// upon async POSTs.
-function mturkSubmit(submitUrl) {
+    // MTurk ONLY accepts submits via form elements
     var form = $("#submit-form");
-    addHiddenField(form, 'assignmentId', state.assignmentId);
-    addHiddenField(form, 'workerId', state.workerId);
-    var results = {
-        'inputs': state.taskInputs,
-        'outputs': state.taskOutputs
-    };
-    if (!config.advanced.includeDemographicSurvey) {
-        results['feedback'] = $("#feedback-input").val();
-    }
-    console.log("results", results);
-    addHiddenField(form, 'results', JSON.stringify(results));
-    addHiddenField(form, 'feedback', $("#feedback-input").val());
-
+    addHiddenField(form, 'assignmentId', assignmentId);
+    addHiddenField(form, 'workerId', workerId);
     $("#submit-form").attr("action", submitUrl);
     $("#submit-form").attr("method", "POST");
     $("#submit-form").submit();
@@ -293,56 +121,14 @@ function mturkSubmit(submitUrl) {
     $("#submit-button").addClass("disabled");
 }
 
-// submit to a customized back-end.
-function externalSubmit(submitUrl) {
-    var payload = {
-        'assignmentId': state.assignmentId,
-        'workerId': state.workerId,
-        'origin': state.origin,
-        'results': {
-            'inputs': state.taskInputs,
-            'outputs': state.taskOutputs
-        }
-    }
-    console.log("payload", payload);
-    if (!config.advanced.includeDemographicSurvey) {
-        payload.results.feedback = $("#feedback-input").val();
-    }
-    console.log("submitUrl", submitUrl);
-
-    $.ajax({
-        url: submitUrl,
-        type: 'POST',
-        data: JSON.stringify(payload),
-        dataType: 'json'
-    }).then(function(response) {
-        showSubmitKey(response['key']);
-    }).catch(function(error) {
-        // This means there was an error connecting to the DEVELOPER'S
-        // data collection server.
-        // even if there is a bug/connection problem at this point,
-        // we want people to be paid.
-        // use a consistent prefix so we can pick out problem cases,
-        // and include their worker id so we can figure out what happened
-        console.log("ERROR", error);
-        key = "mturk_key_" + state.workerId + "_" + state.assignmentId;
-        showSubmitKey(key);
-    })
-}
-
-/* MAIN */
 $(document).ready(function() {
-    $.getJSON("config_2.json").done(function(data) {
+    getURLParams();
+
+    $.getJSON("config.json").done(function(data) {
         config = data;
-        if (config.meta.aggregate) {
-            state.taskOutputs = {};
-        }
-        custom.loadTasks(config.meta.numSubtasks).done(function(taskInputs) {
-            state.taskInputs = taskInputs;
-            populateMetadata(config);
-            demoSurvey.maybeLoadSurvey(config);
-            setupButtons(config);
-        });
+        populateMetadata(config);
+        demoSurvey.maybeLoadSurvey(config);
+        setupButtons(config);
     }).catch(function(error) {
         console.log("ERROR AT DOCUMENT.READY");
         console.log(error);
