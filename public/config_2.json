@@ -10,7 +10,7 @@
         "simple": "You will watch a stream of 3-second videos. Your task is to tell us when you see a video we've already shown.",
         "steps": [
             "Press the play button to start the video sequence.",
-            "Press R or SPACEBAR when you see a video that has been shown already.",
+            "Press SPACEBAR when you see a video that has been shown already.",
             "If your accuracy is good, you will be able to advance to the next level!"
         ],
         "images": []
