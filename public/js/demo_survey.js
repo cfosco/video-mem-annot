@@ -1,11 +1,8 @@
 var demoSurvey = {
-	maybeLoadSurvey: function(config) {
-	    if (config.advanced.includeDemographicSurvey) {
-	        console.log("loading demo survey");
-	        $('#demo-survey').load("html/demo_survey.html");
-	        $('#demo-survey').hide();
-	        $('#feedback-field').hide();
-	    }
+	loadSurvey: function() {
+        $('#demo-survey').load("html/demo_survey.html");
+        $('#demo-survey').hide();
+        $('#feedback-field').hide();
 	},
 	hideSurvey: function() {
 		$('#demo-survey').hide();
