@@ -5,23 +5,25 @@ const { pool, initDB } = require('../database/database');
 const { getSeqTemplate } = require('../utils/sequence');
 const { getVideos, saveResponses } = require('../database/dbops');
 const assert = require('assert');
-
 // helper functions for use in tests
 
+function calcAnswers(videos, correct) {
+  const urls = new Set();
+  return videos.map(vid => {
+    const answer = urls.has(vid.url);
+    urls.add(vid.url);
+    if (!correct) {
+      return !answer;
+    }
+    return answer;
+  });
+}
+
 async function getVidsAndMakeAnswers(user, correct=true) {
-    const urls = new Set();
     const template = getSeqTemplate();
-    const videos = await getVideos(user, template);
-    const answers = videos["videos"].map(vid => {
-      const answer = urls.has(vid.url);
-      urls.add(vid.url);
-      if (!correct) {
-        return !answer;
-      }
-      return answer;
-    })
-    // sanity check
-    return answers;
+    const urls = new Set();
+    const {videos, level} = await getVideos(user, template);
+    return calcAnswers(videos, correct);
 }
 
 beforeAll(async (done) => {
@@ -51,10 +53,10 @@ describe('Test get videos', () => {
   test('It should return data in the correct format', async (done) => {
     const template = getSeqTemplate(); // TODO: use a custom template
     const [nTargets, nFillers, ordering] = template;
-    const vidData = await getVideos('test1', template);
+    const {videos, level} = await getVideos('test1', template);
     
-    const vids = vidData["videos"];
-    expect(vids.length).toBe(ordering.length);
+    expect(videos.length).toBe(ordering.length);
+    expect(level).toBe(1);
     
     // check n targets is correct
     const targets = new Set(ordering.filter(([url, type]) => type == "target" || type == "target_repeat").map(([url, type]) => url));
@@ -70,8 +72,9 @@ describe('Test get videos', () => {
   test('It should never repeat urls', async (done) => {
     const urls = new Set();
     for (let i = 1; i < 10; i += 1) {
-      vidData = await getVideos('test2', getSeqTemplate());
-      const sequenceURLs = new Set(vidData.videos.map((elt) => elt.url));
+      const {videos, level} = await getVideos('test2', getSeqTemplate());
+      expect(level).toBe(1);
+      const sequenceURLs = new Set(videos.map((elt) => elt.url));
       sequenceURLs.forEach(url => {
         expect(urls.has(url)).toBe(false);
         urls.add(url);
@@ -79,6 +82,19 @@ describe('Test get videos', () => {
     }
     done();
   }, 30000);
+});
+
+describe('Test increasing levels', () => {
+  test('Levels should increase', async (done) => {
+    const username = 'testIncLevel';
+    for (let i = 1; i <=3; i++) {
+      const {videos, level} = await getVideos(username, getSeqTemplate());
+      expect(level).toBe(i);
+      const answers = calcAnswers(videos, correct=true); 
+      await saveResponses(username, answers);
+    }
+    done();
+  });
 });
 
 describe('Test save answers', () => {
@@ -170,9 +186,10 @@ describe('Test game start', () => {
       .send({ workerID: 'test4'})
       .expect(200)
       .end((err, res) => {
-        const { body: vidData } = res;
+        const { videos, level } = res.body;
         // check it returns some vids
-        assert(vidData.videos.length > 1);
+        assert(videos.length > 1);
+        expect(level).toBe(1);
         done();
       });
   });
@@ -180,15 +197,9 @@ describe('Test game start', () => {
 
 describe('Test game end', () => {
   test('It should return the scores', async (done) => {
-    const urls = new Set();
     const template = getSeqTemplate();
-    const videoData = await getVideos('test5', template);
-    const answers = videoData.videos.map(vid => {
-      const answer = urls.has(vid.url);
-      urls.add(vid.url);
-      return answer;
-    });
-
+    const {videos, level} = await getVideos('test5', template);
+    const answers = calcAnswers(videos, correct=true);
     request(app)
       .post('/api/start')
       .send({ workerID: 'test5', responses: answers})
