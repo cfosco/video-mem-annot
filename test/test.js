@@ -7,7 +7,8 @@ const {
     getVideos, 
     saveResponses, 
     BlockedError,
-    UnauthenticatedError 
+    UnauthenticatedError,
+    OutOfVidsError
 } = require('../database/dbops');
 const assert = require('assert');
 // helper functions for use in tests

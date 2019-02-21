@@ -84,7 +84,7 @@ async function getVideos(workerID, seqTemplate) {
     [userID, numVideos]
   );
   if (vidsToShow.length < numVideos) {
-    throw new Error('No more videos for user.');
+    throw new OutOfVidsError(user.worker_id);
   }
   
   const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
@@ -230,5 +230,6 @@ module.exports = {
   getVideos,
   saveResponses, 
   BlockedError,
-  UnauthenticatedError
+  UnauthenticatedError,
+  OutOfVidsError
 };
