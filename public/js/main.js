@@ -78,7 +78,7 @@
     $('.meta-title').html(CONFIG.title);
     $('.meta-desc').html(CONFIG.description);
     $('.instructions-simple').html(CONFIG.instructions);
-    for (var i = 0; i < CONFIG.steps; i++) {
+    for (var i = 0; i < CONFIG.steps.length; i++) {
       $('.instructions-steps').append($('<li>' + CONFIG.steps[i] + '</li>'));
     }
     $('.disclaimer').html(CONFIG.disclaimer);
