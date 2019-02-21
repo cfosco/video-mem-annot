@@ -332,7 +332,7 @@ function externalSubmit(submitUrl) {
 
 /* MAIN */
 $(document).ready(function() {
-    $.getJSON("config.json").done(function(data) {
+    $.getJSON("config_2.json").done(function(data) {
         config = data;
         if (config.meta.aggregate) {
             state.taskOutputs = {};
