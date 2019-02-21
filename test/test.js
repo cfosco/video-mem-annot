@@ -105,11 +105,13 @@ describe('Test save answers', () => {
       overallScore,
       vigilanceScore,
       numLives,
+      passed,
       completedLevels
     } = await saveResponses(username, answers);
     expect(overallScore).toEqual(1);
     expect(numLives).toEqual(2);
     expect(vigilanceScore).toEqual(1);
+    expect(passed).toBe(true);
     expect(completedLevels).toHaveLength(1);
     expect(completedLevels[0].score).toEqual(1);
     done();
@@ -117,7 +119,7 @@ describe('Test save answers', () => {
 });
 
 describe('Test lives increment when correct', () => {
-  test('Lives should increment at 50', async (done) => {
+  test('Lives should increment at levelsPerLife', async (done) => {
     const username = 'testLivesInc';
     for (let i = 0; i < 3; i++) {
         const answers = await getVidsAndMakeAnswers(username);
@@ -125,6 +127,7 @@ describe('Test lives increment when correct', () => {
           overallScore,
           vigilanceScore,
           numLives,
+          passed,
           completedLevels
         } = await saveResponses(username, answers, levelsPerLife=3);
         if (i == 2) {
@@ -145,9 +148,11 @@ describe('Test failure on first round', () => {
       overallScore,
       vigilanceScore,
       numLives,
+      passed,
       completedLevels
     } = await saveResponses(username, wrongAnswers);
     expect(numLives).toEqual(0);
+    expect(passed).toBe(false);
     done();
   })
 });
@@ -170,8 +175,10 @@ describe('Test failure on later rounds', () => {
         overallScore,
         vigilanceScore,
         numLives,
+        passed,
         completedLevels
       } = await saveResponses(username, wrongAnswers);
+      expect(passed).toBe(false);
       finalLives = numLives;
     }
     expect(finalLives).toEqual(0);
@@ -206,6 +213,7 @@ describe('Test game end', () => {
       .expect(200, {
         overallScore: 1,
         vigilanceScore: 1,
+        passed: true,
         numLives: 2,
       })
       .end((err, res) => {

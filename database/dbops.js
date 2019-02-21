@@ -125,6 +125,7 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   var numLives;
   var overallScore;
   var vigilanceScore;
+  var passed;
   await withinTX(async (connection) => {
     // update db with answers
     const updates = responses.map((response, position) =>
@@ -147,7 +148,7 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
     const numVigRight = vigilancePresentations.filter(right).length;
     overallScore = numRight / numAll;
     vigilanceScore = numVigRight / numVig;
-    const passed = didPassLevel(overallScore, vigilanceScore);
+    passed = didPassLevel(overallScore, vigilanceScore);
     await connection.query('UPDATE levels SET score = ? WHERE id = ?', [overallScore, levelID]);
     // TODO: add reward
 
@@ -181,6 +182,7 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
     overallScore,
     vigilanceScore,
     numLives,
+    passed,
     completedLevels,
   }
 }
