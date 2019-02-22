@@ -413,13 +413,15 @@
           // play next video
           videoElements.shift();
 
-          // videoElements = [] // DEBUG
+          if (DEBUG) {
+            videoElements = [] // DEBUG
+          }
 
           if (videoElements.length > 0) {
             videoElements[0].play();
           } else {
-            if (DEBUG) {
-              var data = {};  // DEBUG
+            if (DEBUG) { // DEBUG
+              var data = {};
 
               data.overallScore = 0.81
               data.completedLevels = [{"score":0.3, "reward":1},
