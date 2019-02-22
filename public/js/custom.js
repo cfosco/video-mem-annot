@@ -252,8 +252,8 @@ function showTask(taskData) {
    * @param {object} data the response body for /api/done
    */
   function showResultsPage(data) {
-    $experiment.css('display', 'none');
-    $endGame.css('display', 'flex');
+    $experiment.hide();
+    $endGame.show();
     $('#score-radial').attr("data-percentage", (data.overallScore * 100).toFixed(0) + '%');
     var pastScores = data.completedLevels.map(function(d) {
       return Math.floor(d.score * 100);
@@ -350,15 +350,7 @@ function showTask(taskData) {
           videoElements[0].play();
         } else {
 
-          // $.post({
-          //   "url": "api/end/",
-          //   "data": JSON.stringify({
-          //     workerID: taskData.workerId,
-          //     responses: responses
-          //   }),
-          //   contentType: 'application/json; charset=utf-8',
-          //   dataType: 'json'
-          // }).done(showResultsPage);
+
 
           if (DEBUG) {
             var data = {};  // DEBUG
@@ -375,6 +367,17 @@ function showTask(taskData) {
             {"score":0.56, "reward":1}
             ]
             showResultsPage(data)
+          }
+          else {
+            $.post({
+              "url": "api/end/",
+              "data": JSON.stringify({
+                workerID: taskData.workerId,
+                responses: responses
+              }),
+              contentType: 'application/json; charset=utf-8',
+              dataType: 'json'
+            }).done(showResultsPage);
           }
 
         }
@@ -399,52 +402,29 @@ function showTask(taskData) {
     }
   }
 
-  // play/pause buttons
-  if (SHOW_PLAY_PAUSE) {
-    $('#playButton').click(function () {
-      videoElements[0].play();
-    });
+  // Handle tap video (for mobile)
+  $('#video_container').on('touchstart', function() {
+    handleCheck(true, true);
+  });
 
-    $('#pauseButton').click(function () {
-      videoElements[0].pause();
-    });
-  } else {
-    $('#playButton').hide();
-    $('#pauseButton').hide();
+  $('#playButton').click(function () {
+    videoElements[0].play();
+  });
+
+  $('#pauseButton').click(function () {
+    videoElements[0].pause();
+  });
+
+  if (SHOW_PLAY_PAUSE) {
+    $('.dev-controls').show();
   }
 
-  // progress bar
   if (!SHOW_PROGRESS) {
     $('#progress-bar').css('display', 'none');
   }
-
-
-
-    // get videos and start game
-    // $.post({
-    //   "url": "api/start/",
-    //   "data": {
-    //     workerID: "demo-worker"
-    //   }
-    // }).done(function (data) {
-    //   var vids = data.videos;
-    //   level = data.level;
-    //   $('#level-num').html(level);
-    //   for (var i = 0; i < vids.length; i++) {
-    //     transcripts.push(BASE_PATH_VIDEOS + vids[i]["url"])
-    //     types.push(vids[i]["type"])
-    //   }
-    //   $progressBar.progress({ total: transcripts.length });
-    //   for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
-    //     newVideo(transcripts[counter], types[counter]);
-    //   }
-    //   if (!SHOW_PLAY_PAUSE) {
-    //     videoElements[0].play();
-    //   }
-    // });
-
-  $('#level-num').html(level);
   $progressBar.progress({ total: transcripts.length });
+
+  // preload videos and start game
   for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
     newVideo(transcripts[counter], types[counter]);
   }

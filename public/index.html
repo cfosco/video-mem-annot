@@ -8,70 +8,69 @@
     <title>Memento Game</title>
     <meta name="description" content="Video Memory Game">
     <meta name="author" content="Computational Perception and Cognition Group (CSAIL, MIT)">
+    <meta name="viewport" content="width=device-width">
 
     <link rel="stylesheet" href="lib/semantic/semantic.min.css">
-    <link rel="stylesheet" href="css/overrides.css">
     <link rel="stylesheet" href="css/mem_annot.css">
     <script src="lib/url-search-params-polyfill.min.js"></script>
     <script src="lib/jquery/jquery-3.1.1.min.js"></script>
     <script src="lib/semantic/semantic.min.js"></script>
-    <script src="js/require.js"></script>
+    <script src="lib/d3.v3.min.js"></script>
     <script src="js/custom.js"></script>
     <script src="js/main.js"></script>
-    <script src="js/demo_survey.js"></script>
-    <script src="//d3js.org/d3.v3.min.js"></script>
-
 </head>
 
 <body>
-    <div class="ui container" id="app">
-        <h1 id="page-title" class="meta-title ui centered dividing header"></h1>
-        <div id="instructions" class="ui top aligned centered grid">
-            <div class="row">
-                <div class="left aligned fourteen wide column">
-                    <h2>Instructions</h2>
-                    <p><b class="meta-desc"></b></p>
-                    <p class="instructions-simple"></p>
-                    <h3>Guidelines:</h3>
-                    <ol class="instructions-steps">
-                    </ol>
-                    <div id="sample-task">
-                        <h3>Sample task:</h3>
-                        <div id="instructions-demo"></div>
-                    </div>
+    <div id="app">
+        <div class="ui error message subtask" id="hit-not-accepted" style="display:none">
+            You have not yet accepted this HIT.
+            Please accept the HIT before you can see the rest of the task.
+        </div>
 
-                    <!-- SAMPLE VIDEO -->
-                  <div id="sample-video">
-                    <h3>Instructional video:</h3>
-                        <div class="container" style="text-align:center;">
-                        <video width="600" height="450" controls>
-                          <source src="img/MementoGameGif1WithSubtitles.mp4" type="video/mp4">
-                          <!-- <source src="movie.ogg" type="video/ogg"> -->
-                        Your browser does not support the video tag.
-                        </video>
-                      </div>
-                  </div>
-                  <br>
-
-                    <div id="start-button" class="ui primary button right floated">Start Game!</div>
-                </div>
+        <div id="instructions">
+            <h1>Memento: The Video Memory Game</h1>
+            <h2>Level <span class="level-num"></span></h2>
+            <h2>Instructions</h2>
+            <p><b>Press SPACEBAR (or tap the video on mobile) when you see a video we've shown before.</b></p>
+            <p>
+                You will watch a stream of 3-second videos. Some videos will be shown twice.
+                Your task is to press SPACEBAR (or tap the video on mobile) when you see a video we've already shown.
+                If you are correct, you will see a <span style="color:darkgreen;">green flash</span> around the video.
+                If you are wrong, you will see a <span style="color:darkred;">red flash</span>.
+            </p>
+            <p>
+                The video will begin as soon as you press &ldquo;Start Game&rdquo;.
+                If you do well, you will be able to advance to the next level!
+            </p>
+            </ol>
+            <button id="start-button" class="ui primary button">Start Game!</button>
+            <h3>Instructional video:</h3>
+            <div id="sample-video">
+                <video controls>
+                    <source src="img/MementoGameGif1WithSubtitles.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
-            <div class="row" id="disclaimer-box">
-                <div class="center aligned fourteen wide column">
-                    <p class="disclaimer"></p>
-                </div>
+            <br>
+            <div id="disclaimer-box">
+                <p class="disclaimer">
+                    By playing this game, you are participating in a study being performed by MIT.
+                    You may decline further participation, at any time, without adverse consequences.
+                    Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.
+                </p>
             </div>
         </div>
-        <div class="ui error message subtask" id="hit-not-accepted" style="display:none">You have not yet accepted this
-            HIT. Please accept the HIT before you can see the rest of the task.</div>
+
         <div id="succesful-submit" class="row" style="display: none; text-align:center">
             <p class="ui header">Thank you for completing the task!</p>
         </div>
-        <div id="experiment" class="ui top aligned centered relaxed grid">
-            <div class="row" id="custom-experiment">
-            <!-- vv CUSTOM EXPERIMENT MARKUP GOES HERE vv -->
+
+        <div id="experiment" style="display:none">
+            <div id="custom-experiment">
+            <!--
                 <h3> Level <span id="level-num"></span></h3>
                 <h4> Watch videos and press SPACEBAR when you see one you've seen already!</h4>
+            -->
                 <div id="main-interface">
                     <div id="video-and-progress">
                         <div id="video_container">
@@ -80,79 +79,51 @@
                         <div id="progress-bar">
                             <div class="ui small olive progress">
                                 <div class="bar"></div>
-                                <div class="label">Progress</div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="row">
+                <div class="row dev-controls" style="display:none">
                     <button id="playButton" class="ui green button">Play</button>
                     <button id="pauseButton" class="ui green button">Pause</button>
                 </div>
-            <!-- ^^ CUSTOM EXPERIMENT MARKUP GOES HERE ^^ -->
             </div>
 
             <!--End of the experiment page-->
-            <div id="endGame" class="ui top aligned centered relaxed grid" style="display:none">
-                <div class="middle aligned row">
-                    <!-- <div id="score-box">
-                        <p class="ui header">Your Score</p>
-                        <h2 class="ui header" id="repeats-detected"></h1>
-                    </div> -->
-                    <div class="score-container">
-                      <p  id="score-text">Your Score:</p>
-
-                      <div id="score-radial"
-                         data-percentage="0"
-                         data-track-width="20"
-                         data-track-colour="555555"
-                         data-fill-colour="4682b4"
-                         data-text-colour="679fce"
-                         data-stroke-colour="FFFFFF"
-                         data-stroke-spacing="4">
+            <div id="endGame" style="display:none">
+                <div class="score-container">
+                    <p  id="score-text">Your Score:</p>
+                    <div id="score-radial"
+                        data-percentage="0"
+                        data-track-width="20"
+                        data-track-colour="555555"
+                        data-fill-colour="4682b4"
+                        data-text-colour="679fce"
+                        data-stroke-colour="FFFFFF"
+                        data-stroke-spacing="4">
                     </div>
-
-                  </div>
                 </div>
-                <div class="row">
-                    <div class="graphs">
-                      <h3 class="graph-header">Your results so far:</h3>
-                      <br>
-                        <div class="graph-container">
-
-                            <div id="graph-accuracy"></div>
-                            <div id="graph-earnings"></div>
-                        </div>
+    
+                <div class="graphs">
+                    <h3 class="graph-header">Your results so far:</h3>
+                    <br>
+                    <div class="graph-container">
+                        <div id="graph-accuracy" class="graph"></div>
+                        <div id="graph-earnings" class="graph"></div>
                     </div>
                 </div>
             </div>
 
-            <div id="demo-survey" class="ui top aligned centered grid"></div>
+            <button id="submit-button" class="ui green button" style="display:none">
+                Submit
+            </button>
 
-            <div class="middle aligned row">
-                <div class="eight wide column">
-                    <div id="message-field" class="field">
-                    </div>
-                </div>
-            </div>
-
-            <div class="top aligned row">
-                <div class="eight wide column"></div>
-                <div class="right aligned eight wide column">
-                    <div id="final-task-fields" class="ui form">
-                        <div id="submit-field" class="field">
-                            <div id="submit-button" class="ui green right floated button">Submit  (Quit Game)</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row">
-                <form id="submit-form" name="submit-form">
-                </form>
-            </div>
+            <form id="submit-form" name="submit-form">
+                <!-- never rendered; this exists in DOM so we can submit to MTurk -->
+            </form>
 
         </div>
+
      </div>
 </body>
 

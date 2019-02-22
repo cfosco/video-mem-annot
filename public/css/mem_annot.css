@@ -8,51 +8,97 @@
   100% { background-color: rgba(0, 0, 0, 0); }
 }
 
+/* IMO border-box is more intuitive and should be the default */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
+/* make the page take up the whole page */
+html, body {
+  width: 100vw;
+  min-height: 100vh;
+}
 
-#custom-experiment {
+#app {
+  /* center on page, filling width but not stretching too wide */
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+#app, #experiment {
+  height: 100%;
+}
+
+/* must be flex with height 100vh to push disclaimer to bottom */
+#instructions {
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  min-height: 100vh;
 }
 
+#instructions #sample-video {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+#instructions #sample-video video {
+  width: 100%;
+}
+
+/* push start button to right of screen, give it some space */
+#start-button, #submit-button {
+  display: block;
+  margin: 8px 0;
+  margin-left: auto;
+}
+
+/* push disclaimer to bottom, give it a thin line above */
+#disclaimer-box {
+  margin-top: auto;
+  border-top: 1px solid lightgray;
+}
+
+/* needed to prevent scrolling for some reason */
+#custom-experiment, #main-interface {
+  max-height: 100vh;
+}
+
+/* padding determines border (on right/wrong) thickness */
 #main-interface {
-  background-color: rgba(0, 0, 0, 0);
+  padding: 16px;
   border-radius: 10px;
-  /* determines border thickness */
-  /* top is already set due to progress and vid container size */
-  /* right gets increased in js if lifebar is visible */
-  padding: 0 16px;
 }
 
-#custom-experiment button {
-  width: 80px;
-  margin-top: 16px;
+/* makes the video fill the screen with a 16:9 aspect ratio */
+#video-and-progress {
+  width: 100%;
+  /* 45px is the sum of the padding and progressbar height */
+  /* 1.777 is 16/9 */
+  max-width: calc((100vh - 45px) * 1.777);
+  margin: 0 auto; /* center */
 }
 
 /* we need to show all videos with the same viewport
 we do this by having a smaller container with hidden overflow */
 #video_container {
-  /* video size: 16:9 aspect ratio */
-  width: 480px;
-  height: 270px;
-  /* video size will exceed the container: hide the excess */
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  /* video size may exceed the container: hide the excess */
   overflow: hidden;
-  /* maintain main-interface size when lifebar hidden */
-  margin-top: 16px;
+  /* allow video to stretch to fill */
+  position: relative;
 }
 
 #video_container > video {
   /* we have many video elements but only want to show the top one */
   display: none;
-  /* 16:9 ratio but a bit larger than the container */
-  width: 496px;
-  height: 279px;
-  /* sometimes videos have tiny borders, so shift back from origin a bit */
-  margin-top: -8px;
-  margin-left: -4.5px;
   /* picture fill whole element without stretching (cropping if necessary) */
   object-fit: cover;
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* override style to make top video show */
@@ -61,74 +107,49 @@ we do this by having a smaller container with hidden overflow */
 }
 
 #progress-bar {
-  width: 480px;
-  margin-top: 10px;
-  margin-right: auto;
+  width: 100%;
 }
 
-#score-box {
-  margin-top: 20px;
-  background-color: lightgray;
-  display: inline-block;
-  align-items: center;
-  padding: 20px 40px;
-  border-radius: 10px;
+#endGame {
+  text-align: center;
 }
 
-.graphs {
-  /* display: flex;
-  flex-flow: wrap; */
+.graph-header {
+  font-size: 1.5rem;
 }
 
 .graph-container {
   display: flex;
-  display: -webkit-flex; /* Safari */
-  -webkit-align-items: center;
   align-items: center;
+  justify-content: center;
   flex-flow: wrap;
-  text-align: center;
-
 }
 
-.graph-header {
-  font-size: 16pt
+.graph {
+  border-radius: 10px;
+  margin: 20px;
+  margin-top:5px;
 }
 
 #graph-accuracy {
-  display: inline-block;
   background-color: #eff3ff;
-  border-radius: 10px;
-  margin: 20px;
-  margin-top:5px;
 }
 
 #graph-earnings {
-  display: inline-block;
   background-color: #f0ffef;
-  border-radius: 10px;
-  margin: 20px;
-  margin-top:5px;
 }
 
 /* D3 CSS */
-
-.axis path,
-.axis line {
+.axis path, .axis line {
   fill: none;
   stroke: #000;
   shape-rendering: crispEdges;
 }
 
-/* .x.axis path {
-   display: none;
-} */
-
 .line {
   fill: none;
   stroke-width: 5px;
 }
-
-
 
 .overlay {
   fill: none;
@@ -138,28 +159,12 @@ we do this by having a smaller container with hidden overflow */
 .focus {
   fill: lightgrey;
   stroke: black;
-  /* border: 7px solid steelblue;
-  border-image: linear-gradient(center, #00C853, #B2FF59); */
-  /* -webkit-transform: scale(1.3);
-  -ms-transform: scale(1.3);
-  transform: scale(1.3); */
 }
 
-
-
-/* Radial Percentage CSS */
-
-/* #score-radial {
-  padding: 20px;
-  margin: 20px;
-} */
-
-.radial-progress {
-  &__text {
-    font-family: Arial, sans-serif;
-    font-size: 40em !important;
-    font-weight: bold;
-  }
+.radial-progress __text {
+  font-family: Arial, sans-serif;
+  font-size: 40em !important;
+  font-weight: bold;
 }
 
 #score-text {
@@ -169,3 +174,14 @@ we do this by having a smaller container with hidden overflow */
   font-size: 25pt;
   color: steelblue;
 }
+
+#submit-button {
+  margin-right: 16px;
+}
+
+/* these only show up in dev mode */
+#custom-experiment button {
+  width: 80px;
+  margin-top: 16px;
+}
+
