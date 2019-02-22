@@ -3,9 +3,9 @@ const app = require('../app');
 const debug = require('debug')('memento:server');
 const { pool, initDB } = require('../database/database');
 const { getSeqTemplate } = require('../utils/sequence');
-const { 
-    getVideos, 
-    saveResponses, 
+const {
+    getVideos,
+    saveResponses,
     BlockedError,
     UnauthenticatedError,
     OutOfVidsError
@@ -48,7 +48,7 @@ async function checkThrowsError(asyncFunc, errorClass) {
 
 beforeAll(async (done) => {
   // clears all the tables before running tests
-  for (let table of ['presentations', 'levels', 'users']) {
+  for (let table of ['presentations', 'levels', 'users', 'videos']) {
     await pool.query('DROP TABLE ' + table)
       .catch((e) => {
         debug("error dropping table", e);
@@ -74,17 +74,17 @@ describe('Test get videos', () => {
     const template = getSeqTemplate(); // TODO: use a custom template
     const [nTargets, nFillers, ordering] = template;
     const {videos, level} = await getVideos('test1', template);
-    
+
     expect(videos.length).toBe(ordering.length);
     expect(level).toBe(1);
-    
+
     // check n targets is correct
     const targets = new Set(ordering.filter(([url, type]) => type == "target" || type == "target_repeat").map(([url, type]) => url));
     expect(targets.size).toBe(nTargets);
-    // check n fillers is correct 
+    // check n fillers is correct
     const allUrls = new Set(ordering.map(([url, type]) => url));
     expect(allUrls.size).toBe(nTargets + nFillers);
-  
+
     done();
   });
 
@@ -110,7 +110,7 @@ describe('Test increasing levels', () => {
     for (let i = 1; i <=3; i++) {
       const {videos, level} = await getVideos(username, getSeqTemplate());
       expect(level).toBe(i);
-      const answers = calcAnswers(videos, correct=true); 
+      const answers = calcAnswers(videos, correct=true);
       await saveResponses(username, answers);
     }
     done();
@@ -231,7 +231,7 @@ describe('Test failure on later rounds', () => {
     await checkThrowsError(async () => {
         await getVideos(username, getSeqTemplate());
     }, BlockedError);
-    
+
     await checkThrowsError(async() => {
         await saveResponses(username, []);
     }, BlockedError);
@@ -274,7 +274,7 @@ describe('Test game start blocked user', () => {
       .send({ workerID: username})
       .expect(403)
       .end((err, res) => {
-        if (err) return done(err); 
+        if (err) return done(err);
         done();
       });
   });
@@ -290,7 +290,7 @@ describe('Test game end', () => {
       .send({ workerID: 'test5', responses: answers})
       .expect(200)
       .end((err, res) => {
-        if (err) return done(err); 
+        if (err) return done(err);
         const {
             overallScore,
             vigilanceScore,
@@ -321,13 +321,13 @@ describe('Test game end blocked user', () => {
       completedLevels
     } = await saveResponses(username, wrongAnswers);
     expect(numLives).toBe(0);
- 
+
     request(app)
       .post('/api/end')
       .send({ workerID: username, responses: []})
       .expect(403)
       .end((err, res) => {
-        if (err) return done(err); 
+        if (err) return done(err);
         done();
       });
   });
@@ -340,7 +340,7 @@ describe('Test API invalid user', () => {
       .send({ workerID: ""})
       .expect(401)
       .end((err, res) => {
-        if (err) return done(err); 
+        if (err) return done(err);
         done();
       });
     });
@@ -351,7 +351,7 @@ describe('Test API invalid user', () => {
         .send({ workerID: "", responses: []})
         .expect(401)
         .end((err, res) => {
-          if (err) return done(err); 
+          if (err) return done(err);
           done();
         });
     });

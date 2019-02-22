@@ -10,6 +10,12 @@ function showTask(taskData) {
     FILLER: "filler",
   }
   var CLIP_DURATION = 3; // in seconds
+  var DEBUG = false
+  var LOAD_VIDEOMEM = false
+
+  if (LOAD_VIDEOMEM) {
+    BASE_PATH_VIDEOS = ""
+  }
 
   // inputs
   var level = taskData.level;
@@ -327,8 +333,6 @@ function showTask(taskData) {
 
     video.ontimeupdate = function () {
 
-      // video.currentTime = CLIP_DURATION //DEBUG
-
       if (video.currentTime >= CLIP_DURATION) {
         // check for missed repeat
         handleCheck(false, false);
@@ -338,36 +342,41 @@ function showTask(taskData) {
         // play next video
         videoElements.shift();
 
-        // videoElements = [] // DEBUG
+        if (DEBUG) {
+          videoElements = [] // DEBUG
+        }
 
         if (videoElements.length > 0) {
           videoElements[0].play();
         } else {
-          $.post({
-            "url": "api/end/",
-            "data": JSON.stringify({
-              workerID: taskData.workerId,
-              responses: responses
-            }),
-            contentType: 'application/json; charset=utf-8',
-            dataType: 'json'
-          }).done(showResultsPage);
 
-          // DEBUG
-          // var data = {};
-          // data.overallScore = 0.80
-          // data.completedLevels = [{"score":0.3, "reward":1},
-          //
-          // {"score":0.44, "reward":1},
-          // {"score":0.56, "reward":1},
-          // {"score":0.54, "reward":1},
-          // {"score":0.7, "reward":1},
-          // {"score":0.83, "reward":1},
-          // {"score":0.44, "reward":1},
-          // {"score":0.56, "reward":1}
-          // ]
+          // $.post({
+          //   "url": "api/end/",
+          //   "data": JSON.stringify({
+          //     workerID: taskData.workerId,
+          //     responses: responses
+          //   }),
+          //   contentType: 'application/json; charset=utf-8',
+          //   dataType: 'json'
+          // }).done(showResultsPage);
 
-          showResultsPage(data)
+          if (DEBUG) {
+            var data = {};  // DEBUG
+
+            data.overallScore = 0.81
+            data.completedLevels = [{"score":0.3, "reward":1},
+
+            {"score":0.44, "reward":1},
+            {"score":0.56, "reward":1},
+            {"score":0.54, "reward":1},
+            {"score":0.7, "reward":1},
+            {"score":0.83, "reward":1},
+            {"score":0.44, "reward":1},
+            {"score":0.56, "reward":1}
+            ]
+            showResultsPage(data)
+          }
+
         }
         // queue up another video
         if (counter < transcripts.length) {
