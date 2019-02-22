@@ -402,7 +402,7 @@
 
       video.ontimeupdate = function () {
 
-        // video.currentTime = CLIP_DURATION //DEBUG
+        video.currentTime = CLIP_DURATION //DEBUG
 
         if (video.currentTime >= CLIP_DURATION) {
           // check for missed repeat
@@ -493,6 +493,18 @@
     }
   }
 
+  /** 
+   * Displays an error message received by an API endpoint to the user.
+   */
+  function showError(error) {
+    console.log(error);
+    $("#error-message-text").text(error.responseText);
+    $("#main-interface").hide();
+    $("#instructions").hide();  
+    $("#experiment").show();
+    $("#error-message").show();
+  }
+
   $(document).ready(function () {
     getURLParams();
     // get videos and start game
@@ -506,7 +518,8 @@
       data.workerId = workerId;
       $('.level-num').html(res.level);
       setupButtons();
-    });
+    })
+    .catch(showError);
   });
 
 })();
