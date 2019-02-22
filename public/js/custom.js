@@ -379,14 +379,6 @@ function showTask(taskData) {
     handleCheck(true, true);
   });
 
-  $('#playButton').click(function () {
-    videoElements[0].play();
-  });
-
-  $('#pauseButton').click(function () {
-    videoElements[0].pause();
-  });
-
   if (SHOW_PLAY_PAUSE) {
     $('.dev-controls').show();
   }
