@@ -1,5 +1,4 @@
 const { pool, withinTX } = require('./database');
-const {getSeqTemplate } = require('../utils/sequence');
 const debug = require('debug')('memento:server');
 
 const VID_TYPES = {
@@ -16,11 +15,40 @@ const didPassLevel = function(overallScore, vigilanceScore) {
    return overallScore > .75 && vigilanceScore > .9; 
 }
 
+// Errors to be used in the API
+class BlockedError extends Error { 
+    constructor(username) {
+        const message = "User " + username + " has been blocked."
+        super(message);
+        this.name = "BlockedError";
+    }
+}
+
+class UnauthenticatedError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = "UnauthenticatedError";
+    }
+}
+
+class OutOfVidsError extends Error {
+    constructor(username) {
+        const message = "User " + username + " is out of videos.";
+        super(message);
+        this.name = "OutOfVidsError";
+    }
+}
+
 /**
  * @param {string} workerID
  * @return {Promise<number>} userID
  */
 async function getUser(workerID) {
+  // this returns just the id bc an INSERT does not return the whole user
+  if (!workerID) {
+    throw new UnauthenticatedError("workerId '" + workerID + "' is not valid");
+  }
+
   let userID;
   const users = await pool.query('SELECT id FROM users WHERE worker_id = ?', workerID);
   if (users.length === 0) {
@@ -42,6 +70,11 @@ async function getVideos(workerID, seqTemplate) {
   const numVideos = nTargets + nFillers;
 
   const userID = await getUser(workerID);
+  const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
+  const user = result[0];
+  if (user.num_lives < 1) {
+    throw new BlockedError(user.worker_id);
+  }
 
   // get N least-seen videos user hasn't seen yet
   const vidsToShow = await pool.query('SELECT id, uri'
@@ -51,7 +84,7 @@ async function getVideos(workerID, seqTemplate) {
     [userID, numVideos]
   );
   if (vidsToShow.length < numVideos) {
-    throw new Error('No more videos for user.');
+    throw new OutOfVidsError(user.worker_id);
   }
   
   const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
@@ -108,17 +141,23 @@ async function getVideos(workerID, seqTemplate) {
 async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW_LIFE) {
   // get the most recent level (TODO: validate we should do this)
   const userID = await getUser(workerID);
+  const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
+  const user = result[0];
+  if (user.num_lives < 1) {
+    throw new BlockedError(user.worker_id);
+  }
+
   const levels = await pool.query('SELECT id FROM levels'
     + ' WHERE id_user = ? ORDER BY id DESC', userID);
   if (levels.length === 0) {
     throw new Error('User has no level in progress');
   }
+  levelID = levels[0].id;
 
   // check that answers have not already been given
-  levelID = levels[0].id;
   const pastResponses = await pool.query('SELECT response FROM presentations'
-    + ' WHERE id_level = ? AND response IS NOT NULL', levelID);
-  if (pastResponses.length !== 0) {
+    + ' WHERE id_level = ? AND response IS NOT NULL LIMIT 1', levelID);
+  if (pastResponses.length > 0) {
     throw new Error('User has no level in progress');
   }
 
@@ -128,10 +167,10 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   var passed;
   await withinTX(async (connection) => {
     // update db with answers
-    const updates = responses.map((response, position) =>
+    const updates = responses.map(({ response, time }, position) =>
       connection.query(
-        'UPDATE presentations SET response = ? WHERE position = ? AND id_level = ?',
-        [response, position, levelID]
+        'UPDATE presentations SET response = ?, seconds = ? WHERE position = ? AND id_level = ?',
+        [response, time, position, levelID]
       )
     );
 
@@ -189,5 +228,8 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
 
 module.exports = {
   getVideos,
-  saveResponses
+  saveResponses, 
+  BlockedError,
+  UnauthenticatedError,
+  OutOfVidsError
 };

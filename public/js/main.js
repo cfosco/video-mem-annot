@@ -6,6 +6,9 @@
   var workerId;
   var submitUrl;
 
+  // populated from server
+  var data;
+
   var CONFIG = {
     title: 'Memento: The Video Memory Game',
     description: 'Indicate which videos you remember by playing a simple memory game on short 3 second videos!',
@@ -98,15 +101,30 @@
     $('#custom-experiment').show();
     $('#experiment').css('display', 'flex');
     $('#instructions').css('display', 'none');
-    showTask(); // from custom.js
+    showTask(data); // from custom.js
   }
 
   /**
    * Add click handlers to buttons, start and submit
    */
   function setupButtons() {
+    $('#start-button').show();
     $('#start-button').click(startTask);
-    $('#submit-button').click(submitHIT);
+    $('#submit-button').click(function() {
+      if (data.level === 1) {
+        demoSurvey.showTask();
+        data.level = -1;
+      } else if (data.level === -1) {
+        if (demoSurvey.validateTask() === false) {
+          // TODO: send survey data to server
+          submitHIT();
+        } else {
+          generateMessage('negative', 'Please complete the survey.');
+        }
+      } else {
+        submitHIT();
+      }
+    });
     if (assignmentId == 'ASSIGNMENT_ID_NOT_AVAILABLE') {
       $('#submit-button').remove();
     }
@@ -136,6 +154,17 @@
     getURLParams();
     populateMetadata();
     demoSurvey.loadSurvey();
-    setupButtons();
+    // get videos and start game
+    $.post({
+      "url": "api/start/",
+      "data": {
+        workerID: workerId
+      }
+    }).done(function (res) {
+      data = res;
+      data.workerId = workerId;
+      setupButtons();
+    });
   });
+
 })();

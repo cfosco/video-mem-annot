@@ -1,4 +1,5 @@
-function showTask() {
+
+function showTask(taskData) {
   // constants
   var BASE_PATH_VIDEOS = "http://data.csail.mit.edu/soundnet/actions3/";
   var VID_TYPES = {
@@ -10,6 +11,15 @@ function showTask() {
   }
   var CLIP_DURATION = 3; // in seconds
 
+  // inputs
+  var level = taskData.level;
+  var transcripts = [];
+  var types = [];
+  taskData.videos.forEach(function(video) {
+    transcripts.push(BASE_PATH_VIDEOS + video.url);
+    types.push(video.type);
+  });
+
   // ui configuration options
   var SHOW_PLAY_PAUSE = false;
   var SHOW_PROGRESS = true;
@@ -18,11 +28,6 @@ function showTask() {
   var JUMP_ON_RIGHT = true;
   var JUMP_ON_WRONG = false;
   var NUM_LOAD_AHEAD = 4;
-
-  // populated in getJSON below
-  var transcripts = [];
-  var types = [];
-  var level = 0;
 
   // get DOM references
   var $progressBar = $("#progress-bar > .ui.progress");
@@ -253,6 +258,7 @@ function showTask() {
     showRadialPercentage();
     showGraph(pastScores, [0,100], '#graph-accuracy', 'Scores');
     showGraph(earnings, [0,earnings[earnings.length-1]+1], '#graph-earnings', 'Earnings ($)');
+    $('#submit-button').show();
   }
 
   /**
@@ -274,7 +280,10 @@ function showTask() {
   function handleCheck(response, showFeedback) {
     if (checked) return;
 
-    responses.push(response);
+    responses.push({
+      response,
+      time: videoElements[0].currentTime
+    });
     var right = isRepeat() === response;
     checked = true;
 
@@ -317,7 +326,9 @@ function showTask() {
     videoElements.push(video);
 
     video.ontimeupdate = function () {
+
       // video.currentTime = CLIP_DURATION //DEBUG
+
       if (video.currentTime >= CLIP_DURATION) {
         // check for missed repeat
         handleCheck(false, false);
@@ -335,7 +346,7 @@ function showTask() {
           $.post({
             "url": "api/end/",
             "data": JSON.stringify({
-              workerID: "demo-worker",
+              workerID: taskData.workerId,
               responses: responses
             }),
             contentType: 'application/json; charset=utf-8',
@@ -398,27 +409,37 @@ function showTask() {
     $('#progress-bar').css('display', 'none');
   }
 
-  // get videos and start game
-  $.post({
-    "url": "api/start/",
-    "data": {
-      workerID: "demo-worker"
-    }
-  }).done(function (data) {
-    var vids = data.videos;
-    level = data.level;
-    $('#level-num').html(level);
-    for (var i = 0; i < vids.length; i++) {
-      transcripts.push(BASE_PATH_VIDEOS + vids[i]["url"])
-      types.push(vids[i]["type"])
-    }
-    $progressBar.progress({ total: transcripts.length });
-    for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
-      newVideo(transcripts[counter], types[counter]);
-    }
-    if (!SHOW_PLAY_PAUSE) {
-      videoElements[0].play();
-    }
-  });
 
+
+    // get videos and start game
+    // $.post({
+    //   "url": "api/start/",
+    //   "data": {
+    //     workerID: "demo-worker"
+    //   }
+    // }).done(function (data) {
+    //   var vids = data.videos;
+    //   level = data.level;
+    //   $('#level-num').html(level);
+    //   for (var i = 0; i < vids.length; i++) {
+    //     transcripts.push(BASE_PATH_VIDEOS + vids[i]["url"])
+    //     types.push(vids[i]["type"])
+    //   }
+    //   $progressBar.progress({ total: transcripts.length });
+    //   for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
+    //     newVideo(transcripts[counter], types[counter]);
+    //   }
+    //   if (!SHOW_PLAY_PAUSE) {
+    //     videoElements[0].play();
+    //   }
+    // });
+
+  $('#level-num').html(level);
+  $progressBar.progress({ total: transcripts.length });
+  for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
+    newVideo(transcripts[counter], types[counter]);
+  }
+  if (!SHOW_PLAY_PAUSE) {
+    videoElements[0].play();
+  }
 }

@@ -3,13 +3,19 @@ const app = require('../app');
 const debug = require('debug')('memento:server');
 const { pool, initDB } = require('../database/database');
 const { getSeqTemplate } = require('../utils/sequence');
-const { getVideos, saveResponses } = require('../database/dbops');
+const { 
+    getVideos, 
+    saveResponses, 
+    BlockedError,
+    UnauthenticatedError,
+    OutOfVidsError
+} = require('../database/dbops');
 const assert = require('assert');
 // helper functions for use in tests
 
 function calcAnswers(videos, correct) {
   const urls = new Set();
-  return videos.map(vid => {
+  const answers = videos.map(vid => {
     const answer = urls.has(vid.url);
     urls.add(vid.url);
     if (!correct) {
@@ -17,6 +23,10 @@ function calcAnswers(videos, correct) {
     }
     return answer;
   });
+  return answers.map((response) => ({
+    response,
+    time: Math.random() * 3
+  }));
 }
 
 async function getVidsAndMakeAnswers(user, correct=true) {
@@ -24,6 +34,16 @@ async function getVidsAndMakeAnswers(user, correct=true) {
     const urls = new Set();
     const {videos, level} = await getVideos(user, template);
     return calcAnswers(videos, correct);
+}
+
+async function checkThrowsError(asyncFunc, errorClass) {
+    let error;
+    try {
+        await asyncFunc();
+    } catch (e) {
+        error = e;
+    }
+    expect(error).toBeInstanceOf(errorClass);
 }
 
 beforeAll(async (done) => {
@@ -97,6 +117,23 @@ describe('Test increasing levels', () => {
   });
 });
 
+describe('Test dbOps with invalid user', () => {
+    const badUser = "";
+    test('getVideos should throw error', async (done) => {
+        await checkThrowsError(async() => {
+            await getVideos(badUser, getSeqTemplate());
+        }, UnauthenticatedError);
+        done();
+    });
+
+    test('saveResponses should throw error', async (done) => {
+        await checkThrowsError(async() => {
+            await saveResponses(badUser, []);
+        }, UnauthenticatedError);
+        done();
+    });
+});
+
 describe('Test save answers', () => {
   test('It should save the answers', async (done) => {
     const username = 'test3';
@@ -121,7 +158,7 @@ describe('Test save answers', () => {
 describe('Test lives increment when correct', () => {
   test('Lives should increment at levelsPerLife', async (done) => {
     const username = 'testLivesInc';
-    for (let i = 0; i < 3; i++) {
+    for (let i = 1; i <= 5; i++) {
         const answers = await getVidsAndMakeAnswers(username);
         const {
           overallScore,
@@ -130,7 +167,7 @@ describe('Test lives increment when correct', () => {
           passed,
           completedLevels
         } = await saveResponses(username, answers, levelsPerLife=3);
-        if (i == 2) {
+        if (i >= 3) {
             expect(numLives).toEqual(3);
         } else {
             expect(numLives).toEqual(2);
@@ -153,6 +190,15 @@ describe('Test failure on first round', () => {
     } = await saveResponses(username, wrongAnswers);
     expect(numLives).toEqual(0);
     expect(passed).toBe(false);
+
+    await checkThrowsError(async () => {
+        await getVideos(username, getSeqTemplate());
+    }, BlockedError);
+
+    await checkThrowsError(async() => {
+        await saveResponses(username, []);
+    }, BlockedError);
+
     done();
   })
 });
@@ -182,6 +228,14 @@ describe('Test failure on later rounds', () => {
       finalLives = numLives;
     }
     expect(finalLives).toEqual(0);
+    await checkThrowsError(async () => {
+        await getVideos(username, getSeqTemplate());
+    }, BlockedError);
+    
+    await checkThrowsError(async() => {
+        await saveResponses(username, []);
+    }, BlockedError);
+
     done();
   });
 });
@@ -202,22 +256,103 @@ describe('Test game start', () => {
   });
 });
 
+describe('Test game start blocked user', () => {
+  test('start should throw 403', async (done) => {
+    const username = 'startBlocked';
+    // block the user
+    const wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses(username, wrongAnswers);
+    expect(numLives).toBe(0);
+    request(app)
+      .post('/api/start')
+      .send({ workerID: username})
+      .expect(403)
+      .end((err, res) => {
+        if (err) return done(err); 
+        done();
+      });
+  });
+});
+
 describe('Test game end', () => {
   test('It should return the scores', async (done) => {
     const template = getSeqTemplate();
     const {videos, level} = await getVideos('test5', template);
     const answers = calcAnswers(videos, correct=true);
     request(app)
-      .post('/api/start')
+      .post('/api/end')
       .send({ workerID: 'test5', responses: answers})
-      .expect(200, {
-        overallScore: 1,
-        vigilanceScore: 1,
-        passed: true,
-        numLives: 2,
-      })
+      .expect(200)
       .end((err, res) => {
+        if (err) return done(err); 
+        const {
+            overallScore,
+            vigilanceScore,
+            passed,
+            numLives,
+            completedLevels
+        } = res.body;
+        expect(overallScore).toBe(1);
+        expect(vigilanceScore).toBe(1);
+        expect(passed).toBe(true);
+        expect(numLives).toBe(2);
+        expect(completedLevels.length).toBe(1);
+        done();
+      })
+  });
+});
+
+describe('Test game end blocked user', () => {
+  test('Game end should return 403', async (done) => {
+    const username = 'endBlocked';
+    // block the user
+    const wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses(username, wrongAnswers);
+    expect(numLives).toBe(0);
+ 
+    request(app)
+      .post('/api/end')
+      .send({ workerID: username, responses: []})
+      .expect(403)
+      .end((err, res) => {
+        if (err) return done(err); 
         done();
       });
   });
+});
+
+describe('Test API invalid user', () => {
+  test('Game start with invalid user should return 401', async (done) => {
+    request(app)
+      .post('/api/start')
+      .send({ workerID: ""})
+      .expect(401)
+      .end((err, res) => {
+        if (err) return done(err); 
+        done();
+      });
+    });
+
+    test('Game end with invalid user should return 401', async (done) => {
+      request(app)
+        .post('/api/end')
+        .send({ workerID: "", responses: []})
+        .expect(401)
+        .end((err, res) => {
+          if (err) return done(err); 
+          done();
+        });
+    });
 });
