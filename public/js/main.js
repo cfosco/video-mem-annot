@@ -9,19 +9,6 @@
   // populated from server
   var data;
 
-  var CONFIG = {
-    title: 'Memento: The Video Memory Game',
-    description: 'Indicate which videos you remember by playing a simple memory game on short 3 second videos!',
-    instructions: 'You will watch a stream of 3-second videos. Some videos will be shown twice. Your task is to press SPACEBAR when you see a video we\'ve already shown. If you correctly recognize a duplicated video, you will see a <span style="color:darkgreen;">green flash</span> around the video. If you are wrong, you will see a <span style="color:darkred;">red flash</span>.',
-    steps: [
-      'The video sequence will begin as soon as you press &ldquo;Start Game&rdquo;.',
-      'Press SPACEBAR when you see a video that has been shown already.',
-      'If your accuracy is good, you will be able to advance to the next level!'
-    ],
-    images: [],
-    disclaimer: 'By playing this game, you are participating in a study being performed by MIT. You may decline further participation, at any time, without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you.'
-  }
-
   /**
    * Gets the values from the URL query string that we need
    */
@@ -46,26 +33,6 @@
     var input = $('<input type="hidden" name="' + name + '" value="">');
     input.val(value);
     form.append(input);
-  }
-
-  /**
-   * Reads data from the config to show the instructions & disclaimer
-   */
-  function populateMetadata() {
-    $('.meta-title').html(CONFIG.title);
-    $('.meta-desc').html(CONFIG.description);
-    $('.instructions-simple').html(CONFIG.instructions);
-    for (var i = 0; i < CONFIG.steps.length; i++) {
-      $('.instructions-steps').append($('<li>' + CONFIG.steps[i] + '</li>'));
-    }
-    $('.disclaimer').html(CONFIG.disclaimer);
-    if (CONFIG.images.length > 0) {
-      $('#sample-task').css('display', 'block');
-      var instructionsIndex = Math.floor(Math.random() * CONFIG.images.length);
-      var imgEle = '<img class="instructions-img" src="';
-      imgEle += CONFIG.images[instructionsIndex] + '"></img>';
-      $('#instructions-demo').append($(imgEle));
-    }
   }
 
   /**
@@ -106,7 +73,6 @@
 
   $(document).ready(function () {
     getURLParams();
-    populateMetadata();
     // get videos and start game
     $.post({
       "url": "api/start/",
@@ -116,6 +82,7 @@
     }).done(function (res) {
       data = res;
       data.workerId = workerId;
+      $('.level-num').html(res.level);
       setupButtons();
     });
   });

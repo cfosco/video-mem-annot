@@ -25,16 +25,18 @@ html, body {
   margin: 0 auto;
 }
 
-/* so we can push things to the bottom */
-#app, #instructions, #experiment {
+#app, #experiment {
   height: 100%;
 }
 
+/* must be flex with height 100vh to push disclaimer to bottom */
 #instructions {
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-/* TODO */
 #instructions #sample-video {
   width: 100%;
   max-width: 600px;
@@ -137,8 +139,6 @@ we do this by having a smaller container with hidden overflow */
   background-color: #f0ffef;
 }
 
-
-
 /* D3 CSS */
 .axis path, .axis line {
   fill: none;
@@ -175,14 +175,8 @@ we do this by having a smaller container with hidden overflow */
   color: steelblue;
 }
 
-
-/* this is only relevant if we put images in the config */
-#instructions-demo {
-  border: 1px solid black;
-  margin-bottom: 10px;
-}
-.instructions-img {
-  width: 100%;
+#submit-button {
+  margin-right: 16px;
 }
 
 /* these only show up in dev mode */
