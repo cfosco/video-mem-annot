@@ -7,9 +7,9 @@
         "aggregate": false
     },
     "instructions": {
-        "simple": "You will watch a stream of 3-second videos. Your task is to tell us when you see a video we've already shown.",
+        "simple": "You will watch a stream of 3-second videos. Some videos will be shown twice. Your task is to press SPACEBAR when you see a video we've already shown. If you correctly recognize a duplicated video, you will see a <span style='color:darkgreen;'>green flash</span> around the video. If you are wrong, you will see a <span style='color:darkgreen;'>red flash</span>. ",
         "steps": [
-            "Press the play button to start the video sequence.",
+            "The video sequence will begin as soon as you press 'Start Game'.",
             "Press SPACEBAR when you see a video that has been shown already.",
             "If your accuracy is good, you will be able to advance to the next level!"
         ],
