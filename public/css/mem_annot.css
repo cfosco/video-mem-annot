@@ -8,6 +8,8 @@
   100% { background-color: rgba(0, 0, 0, 0); }
 }
 
+
+
 #custom-experiment {
   display: flex;
   flex-direction: column;
@@ -80,19 +82,32 @@ we do this by having a smaller container with hidden overflow */
 
 .graph-container {
   display: flex;
+  display: -webkit-flex; /* Safari */
+  -webkit-align-items: center;
+  align-items: center;
   flex-flow: wrap;
   text-align: center;
 
 }
 
+.graph-header {
+  font-size: 16pt
+}
+
 #graph-accuracy {
-  background-color: lightblue;
-  border-radius: 5px;
+  display: inline-block;
+  background-color: #eff3ff;
+  border-radius: 10px;
+  margin: 20px;
+  margin-top:5px;
 }
 
 #graph-earnings {
-  background-color: lightgreen;
-  border-radius: 5px;
+  display: inline-block;
+  background-color: #f0ffef;
+  border-radius: 10px;
+  margin: 20px;
+  margin-top:5px;
 }
 
 /* D3 CSS */
@@ -114,24 +129,43 @@ we do this by having a smaller container with hidden overflow */
 }
 
 
+
 .overlay {
   fill: none;
   pointer-events: all;
 }
 
 .focus {
-  /* fill: steelblue; */
-  stroke: steelblue;
-  border: 2px solid steelblue;
-  border-spacing: 1px;
+  fill: lightgrey;
+  stroke: black;
+  /* border: 7px solid steelblue;
+  border-image: linear-gradient(center, #00C853, #B2FF59); */
   /* -webkit-transform: scale(1.3);
   -ms-transform: scale(1.3);
   transform: scale(1.3); */
 }
 
-.focus:hover
-{
-  -webkit-transform: scale(1.3);
-  -ms-transform: scale(1.3);
-  transform: scale(1.3);
+
+
+/* Radial Percentage CSS */
+
+/* #score-radial {
+  padding: 20px;
+  margin: 20px;
+} */
+
+.radial-progress {
+  &__text {
+    font-family: Arial, sans-serif;
+    font-size: 40em !important;
+    font-weight: bold;
+  }
+}
+
+#score-text {
+  font-weight: bold;
+  margin-top: 40px;
+  margin-bottom: 0px;
+  font-size: 25pt;
+  color: steelblue;
 }

@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="lib/semantic/semantic.min.css">
     <link rel="stylesheet" href="css/overrides.css">
     <link rel="stylesheet" href="css/mem_annot.css">
-    <link rel="stylesheet" href="css/animate.css">
     <script src="lib/url-search-params-polyfill.min.js"></script>
     <script src="lib/jquery/jquery-3.1.1.min.js"></script>
     <script src="lib/semantic/semantic.min.js"></script>
@@ -82,16 +81,30 @@
             <!--End of the experiment page-->
             <div id="endGame" class="ui top aligned centered relaxed grid" style="display:none">
                 <div class="middle aligned row">
-                    <div id="score-box">
+                    <!-- <div id="score-box">
                         <p class="ui header">Your Score</p>
                         <h2 class="ui header" id="repeats-detected"></h1>
+                    </div> -->
+                    <div class="score-container">
+                      <p  id="score-text">Your Score:</p>
+
+                      <div id="score-radial"
+                         data-percentage="0"
+                         data-track-width="20"
+                         data-track-colour="555555"
+                         data-fill-colour="4682b4"
+                         data-text-colour="679fce"
+                         data-stroke-colour="FFFFFF"
+                         data-stroke-spacing="4">
                     </div>
+
+                  </div>
                 </div>
                 <div class="row">
                     <div class="graphs">
-                      <h3 class="graph-header">Your Results so far</h3>
+                      <h3 class="graph-header">Your results so far:</h3>
                       <br>
-                        <div class="graph-container" style="display:flex;">
+                        <div class="graph-container">
 
                             <div id="graph-accuracy"></div>
                             <div id="graph-earnings"></div>
