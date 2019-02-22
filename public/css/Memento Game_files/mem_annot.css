@@ -87,12 +87,10 @@ we do this by having a smaller container with hidden overflow */
 
 #graph-accuracy {
   background-color: lightblue;
-  border-radius: 5px;
 }
 
 #graph-earnings {
   background-color: lightgreen;
-  border-radius: 5px;
 }
 
 /* D3 CSS */
@@ -104,9 +102,9 @@ we do this by having a smaller container with hidden overflow */
   shape-rendering: crispEdges;
 }
 
-/* .x.axis path {
-   display: none;
-} */
+.x.axis path {
+  display: none;
+}
 
 .line {
   fill: none;
@@ -120,7 +118,7 @@ we do this by having a smaller container with hidden overflow */
 }
 
 .focus {
-  /* fill: steelblue; */
+  fill: none;
   stroke: steelblue;
   border: 2px solid steelblue;
   border-spacing: 1px;

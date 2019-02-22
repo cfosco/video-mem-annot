@@ -64,7 +64,7 @@ function showTask() {
     x.domain([1, data.length]);
     y.domain(yRange);
 
-    var xAxis = d3.svg.axis().scale(x).orient("bottom").ticks(data.length);
+    var xAxis = d3.svg.axis().scale(x).orient("bottom");
     var yAxis = d3.svg.axis().scale(y).orient("left");
 
     var line = d3.svg.line()
@@ -222,28 +222,28 @@ function showTask() {
         video.remove();
         // play next video
         videoElements.shift();
-        // videoElements = [] // DEBUG
+        videoElements = [] // DEBUG
         if (videoElements.length > 0) {
           videoElements[0].play();
         } else {
-          $.post({
-            "url": "api/end/",
-            "data": JSON.stringify({
-              workerID: "demo-worker",
-              responses: responses
-            }),
-            contentType: 'application/json; charset=utf-8',
-            dataType: 'json'
-          }).done(showResultsPage);
-          // var data = {};
-          // data.overallScore = 0.80
-          // data.completedLevels = [{"score":0.3, "reward":1},
-          // {"score":0.4, "reward":1},
-          // {"score":0.44, "reward":1},
-          // {"score":0.56, "reward":1},
-          // {"score":0.54, "reward":1},
-          // {"score":0.7, "reward":1},
-          // {"score":0.83, "reward":1}]
+          // $.post({
+          //   "url": "api/end/",
+          //   "data": JSON.stringify({
+          //     workerID: "demo-worker",
+          //     responses: responses
+          //   }),
+          //   contentType: 'application/json; charset=utf-8',
+          //   dataType: 'json'
+          // }).done(showResultsPage);
+          var data = {};
+          data.overallScore = 0.80
+          data.completedLevels = [{"score":0.3, "reward":1},
+          {"score":0.4, "reward":1},
+          {"score":0.44, "reward":1},
+          {"score":0.56, "reward":1},
+          {"score":0.54, "reward":1},
+          {"score":0.7, "reward":1},
+          {"score":0.83, "reward":1}]
           showResultsPage(data)
         }
         // queue up another video
