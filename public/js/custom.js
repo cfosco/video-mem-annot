@@ -21,7 +21,7 @@ function showTask(taskData) {
   });
 
   // ui configuration options
-  var SHOW_PLAY_PAUSE = true;
+  var SHOW_PLAY_PAUSE = false;
   var SHOW_PROGRESS = true;
   var PLAY_SOUND = false;
   var SHOW_FLASH = true;
@@ -246,8 +246,8 @@ function showTask(taskData) {
    * @param {object} data the response body for /api/done
    */
   function showResultsPage(data) {
-    $experiment.css('display', 'none');
-    $endGame.css('display', 'flex');
+    $experiment.hide();
+    $endGame.show();
     $('#score-radial').attr("data-percentage", (data.overallScore * 100).toFixed(0) + '%');
     var pastScores = data.completedLevels.map(function(d) {
       return Math.floor(d.score * 100);
@@ -352,22 +352,6 @@ function showTask(taskData) {
             contentType: 'application/json; charset=utf-8',
             dataType: 'json'
           }).done(showResultsPage);
-
-          // DEBUG
-          // var data = {};
-          // data.overallScore = 0.80
-          // data.completedLevels = [{"score":0.3, "reward":1},
-          //
-          // {"score":0.44, "reward":1},
-          // {"score":0.56, "reward":1},
-          // {"score":0.54, "reward":1},
-          // {"score":0.7, "reward":1},
-          // {"score":0.83, "reward":1},
-          // {"score":0.44, "reward":1},
-          // {"score":0.56, "reward":1}
-          // ]
-
-          showResultsPage(data)
         }
         // queue up another video
         if (counter < transcripts.length) {
@@ -390,18 +374,17 @@ function showTask(taskData) {
     }
   }
 
-  // play/pause buttons
-  if (SHOW_PLAY_PAUSE) {
-    $('#playButton').click(function () {
-      videoElements[0].play();
-    });
 
-    $('#pauseButton').click(function () {
-      videoElements[0].pause();
-    });
-  } else {
-    $('#playButton').hide();
-    $('#pauseButton').hide();
+  $('#playButton').click(function () {
+    videoElements[0].play();
+  });
+
+  $('#pauseButton').click(function () {
+    videoElements[0].pause();
+  });
+
+  if (SHOW_PLAY_PAUSE) {
+    $('.dev-controls').show();
   }
 
   // progress bar

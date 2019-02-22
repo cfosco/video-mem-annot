@@ -38,32 +38,6 @@
   }
 
   /**
-   * Show a message to the user on the page
-   * @param {string} cls class to include in the containing tag
-   * @param {string} header the actual message text
-   */
-  function generateMessage(cls, header) {
-    clearMessage();
-    if (!header) return;
-    var messageStr = '<div class="ui message ' + cls + '">';
-    messageStr += '<i class="close icon"></i>';
-    messageStr += '<div class="header">' + header + '</div></div>';
-
-    var newMessage = $(messageStr);
-    $('#message-field').append(newMessage);
-    newMessage.click(function () {
-      $(this).closest('.message').transition('fade');
-    });
-  }
-
-  /**
-   * Remove the message shown by generateMessage
-   */
-  function clearMessage() {
-    $('#message-field').html('');
-  }
-
-  /**
    * Adds a hidden input to a form
    * Exists because we need to submit via a form element
    */
@@ -98,8 +72,7 @@
    * Hide the instructions and start the task
    */
   function startTask() {
-    $('#custom-experiment').show();
-    $('#experiment').css('display', 'flex');
+    $('#experiment').show();
     $('#instructions').css('display', 'none');
     showTask(data); // from custom.js
   }
@@ -117,7 +90,6 @@
    * Submit the HIT to MTurk
    */
   function submitHIT() {
-    clearMessage();
     $('#submit-button').addClass('loading');
 
     // MTurk ONLY accepts submits via form elements
@@ -129,7 +101,6 @@
     $('#submit-form').submit();
 
     $('#submit-button').removeClass('loading');
-    generateMessage('positive', 'Thanks! Your task was submitted successfully.');
     $('#submit-button').addClass('disabled');
   }
 
