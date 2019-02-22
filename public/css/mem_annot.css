@@ -154,12 +154,10 @@ we do this by having a smaller container with hidden overflow */
   margin: 20px;
 } */
 
-.radial-progress {
-  &__text {
-    font-family: Arial, sans-serif;
-    font-size: 40em !important;
-    font-weight: bold;
-  }
+.radial-progress __text {
+  font-family: Arial, sans-serif;
+  font-size: 40em !important;
+  font-weight: bold;
 }
 
 #score-text {

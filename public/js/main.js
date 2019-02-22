@@ -12,9 +12,9 @@
   var CONFIG = {
     title: 'Memento: The Video Memory Game',
     description: 'Indicate which videos you remember by playing a simple memory game on short 3 second videos!',
-    instructions: 'You will watch a stream of 3-second videos. Your task is to tell us when you see a video we\'ve already shown.',
+    instructions: 'You will watch a stream of 3-second videos. Some videos will be shown twice. Your task is to press SPACEBAR when you see a video we\'ve already shown. If you correctly recognize a duplicated video, you will see a <span style="color:darkgreen;">green flash</span> around the video. If you are wrong, you will see a <span style="color:darkred;">red flash</span>.',
     steps: [
-      'Press the play button to start the video sequence.',
+      'The video sequence will begin as soon as you press &ldquo;Start Game&rdquo;.',
       'Press SPACEBAR when you see a video that has been shown already.',
       'If your accuracy is good, you will be able to advance to the next level!'
     ],
@@ -33,8 +33,8 @@
       submitDomain += '/';
     }
     submitUrl = submitDomain + 'mturk/externalSubmit';
-    assignmentId = urlParams.get('assignmentId') || 'ASSIGNMENT_ID_NOT_AVAILABLE';
-    workerId = urlParams.get('workerId') || 'test-worker';
+    assignmentId = urlParams.get('assignmentId') || '?';
+    workerId = urlParams.get('workerId') || '?';
   }
 
   /**
@@ -110,24 +110,7 @@
   function setupButtons() {
     $('#start-button').show();
     $('#start-button').click(startTask);
-    $('#submit-button').click(function() {
-      if (data.level === 1) {
-        demoSurvey.showTask();
-        data.level = -1;
-      } else if (data.level === -1) {
-        if (demoSurvey.validateTask() === false) {
-          // TODO: send survey data to server
-          submitHIT();
-        } else {
-          generateMessage('negative', 'Please complete the survey.');
-        }
-      } else {
-        submitHIT();
-      }
-    });
-    if (assignmentId == 'ASSIGNMENT_ID_NOT_AVAILABLE') {
-      $('#submit-button').remove();
-    }
+    $('#submit-button').click(submitHIT);
   }
 
   /**
@@ -153,7 +136,6 @@
   $(document).ready(function () {
     getURLParams();
     populateMetadata();
-    demoSurvey.loadSurvey();
     // get videos and start game
     $.post({
       "url": "api/start/",
