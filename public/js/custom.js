@@ -21,7 +21,7 @@ function showTask(taskData) {
   });
 
   // ui configuration options
-  var SHOW_PLAY_PAUSE = false;
+  var SHOW_PLAY_PAUSE = true;
   var SHOW_PROGRESS = true;
   var PLAY_SOUND = false;
   var SHOW_FLASH = true;
