@@ -147,7 +147,7 @@ async function getVideos(workerID, seqTemplate) {
  * @param {Promise<{overallScore: number, vigilanceScore: number, completedLevels: {score: number, reward: number}[]}>}
  * scores are between 0 and 1; reward is (TODO) a dollar value
  */
-async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW_LIFE) {
+async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW_LIFE, errorOnFastSubmit=config.errorOnFastSubmit) {
   // get the most recent level (TODO: validate we should do this)
   const userID = await getUser(workerID);
   const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
@@ -156,7 +156,7 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
     throw new BlockedError(user.worker_id);
   }
 
-  const levels = await pool.query('SELECT id FROM levels'
+  const levels = await pool.query('SELECT * FROM levels'
     + ' WHERE id_user = ? ORDER BY id DESC', userID);
   if (levels.length === 0) {
     throw new InvalidResultsError('User has no level in progress');
@@ -170,9 +170,25 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
     throw new InvalidResultsError('User has no level in progress');
   }
 
+  const presentations = await pool.query('SELECT COUNT(*) AS presentationsCount '
+    + 'FROM presentations WHERE id_level = ?', levelID);
+  const levelLen = presentations[0].presentationsCount;
+ 
+  // check that the time elapsed has not been too short 
+  if (errorOnFastSubmit) {
+    // set the minTime to about 1s per video, which should be plenty
+    const minTimeMsec = levelLen*1*1000;
+    const startTimeMsec = new Date(levels[0].insert_time).getTime();
+    const curTimeMsec = new Date().getTime();
+    const timeDiffMsec = curTimeMsec-startTimeMsec;
+    if (timeDiffMsec < minTimeMsec) {
+        throw new InvalidResultsError('Responses were submitted too quickly to complete the level');
+    }
+  }
+
   // check that answers have the correct format (roughly)
   try {
-      assert(responses.length > 0);
+      assert(responses.length == levelLen);
       responses.forEach((elt) => {
         const { response, time } = elt;
         assert(typeof(response) == "boolean");

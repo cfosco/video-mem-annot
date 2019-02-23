@@ -21,7 +21,7 @@ const test = {
       database        : 'memento'  // TODO: separate test db!!!
   }, 
   enableBlockUsers    : true,
-  errorOnFastSubmit   : true,
+  errorOnFastSubmit   : false,
 }
 
 // TODO: specify a prod config

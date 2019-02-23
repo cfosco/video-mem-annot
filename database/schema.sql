@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS levels (
   id_user INT NOT NULL,
   FOREIGN KEY(id_user) REFERENCES users(id),
   score DECIMAL(10,9),
-  reward DECIMAL(4,2)
+  reward DECIMAL(4,2),
+  insert_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS presentations (
