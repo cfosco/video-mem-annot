@@ -18,8 +18,8 @@
       submitDomain += '/';
     }
     submitUrl = submitDomain + 'mturk/externalSubmit';
-    assignmentId = urlParams.get('assignmentId') || '?';
-    workerId = urlParams.get('workerId') || '?';
+    assignmentId = urlParams.get('assignmentId') || '';
+    workerId = urlParams.get('workerId') || '';
   }
 
   /**
@@ -401,8 +401,7 @@
       videoElements.push(video);
 
       video.ontimeupdate = function () {
-
-        video.currentTime = CLIP_DURATION //DEBUG
+        //video.currentTime = CLIP_DURATION //DEBUG
 
         if (video.currentTime >= CLIP_DURATION) {
           // check for missed repeat
