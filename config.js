@@ -8,8 +8,7 @@ const dev = {
       password        : process.env.MYSQL_PASS,
       database        : 'memento'
   }, 
-  enableblockUsers    : false,
-  errorOnOutOfVideos  : false,
+  enableBlockUsers    : false,
   errorOnFastSubmit   : false,
 } 
 
@@ -21,8 +20,7 @@ const test = {
       password        : process.env.MYSQL_PASS,
       database        : 'memento'  // TODO: separate test db!!!
   }, 
-  enableblockUsers    : true,
-  errorOnOutOfVideos  : true,
+  enableBlockUsers    : true,
   errorOnFastSubmit   : true,
 }
 

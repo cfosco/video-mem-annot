@@ -1,6 +1,7 @@
 const { pool, withinTX } = require('./database');
 const debug = require('debug')('memento:server');
 const assert = require('assert');
+const config = require('../config');
 
 const VID_TYPES = {
     TARGET_REPEAT: "target_repeat",
@@ -80,7 +81,7 @@ async function getVideos(workerID, seqTemplate) {
   const userID = await getUser(workerID);
   const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
   const user = result[0];
-  if (user.num_lives < 1) {
+  if (user.num_lives < 1 && config.enableBlockUsers) {
     throw new BlockedError(user.worker_id);
   }
 
@@ -151,7 +152,7 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   const userID = await getUser(workerID);
   const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
   const user = result[0];
-  if (user.num_lives < 1) {
+  if (user.num_lives < 1 && config.enableBlockUsers) {
     throw new BlockedError(user.worker_id);
   }
 
