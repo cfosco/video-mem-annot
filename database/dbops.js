@@ -85,17 +85,33 @@ async function getVideos(workerID, seqTemplate) {
     throw new BlockedError(user.worker_id);
   }
 
-  // get N least-seen videos user hasn't seen yet
-  const vidsToShow = await pool.query('SELECT id, uri'
+  // select nTargets least-seen videos user hasn't seen yet
+  const targetVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
     + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
     + ' ORDER BY labels ASC LIMIT ?',
+    [userID, nTargets]
+  );
+
+  // select numVideos vids that user hasn't seen yet randomly 
+  const randomVids = await pool.query('SELECT id, uri'
+    + ' FROM videos WHERE id NOT IN'
+    + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
+    + ' ORDER BY RAND() LIMIT ?',
     [userID, numVideos]
   );
-  if (vidsToShow.length < numVideos) {
+
+  // select fillers by taking the first nFillers vids from the set difference
+  // targetVids - randomVids
+  const targetsSet = new Set(targetVids.map(({id, uri}) => id));
+  const potentialFillers = randomVids.filter(({id, uri}) => !targetsSet.has(id));
+
+  if (potentialFillers.length < nFillers) {
     throw new OutOfVidsError(user.worker_id);
   }
-  
+  const fillerVids = potentialFillers.slice(0, nFillers);
+  const vidsToShow = targetVids.concat(fillerVids);
+ 
   const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
     + 'WHERE id_user = ? AND score IS NOT NULL'
   , userID);
