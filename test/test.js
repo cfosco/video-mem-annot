@@ -8,7 +8,8 @@ const {
     saveResponses,
     BlockedError,
     UnauthenticatedError,
-    OutOfVidsError
+    OutOfVidsError,
+    InvalidResultsError
 } = require('../database/dbops');
 const assert = require('assert');
 // helper functions for use in tests
@@ -117,7 +118,7 @@ describe('Test increasing levels', () => {
   });
 });
 
-describe('Test dbOps with invalid user', () => {
+describe('Test dbops with invalid user', () => {
     const badUser = "";
     test('getVideos should throw error', async (done) => {
         await checkThrowsError(async() => {
@@ -130,6 +131,33 @@ describe('Test dbOps with invalid user', () => {
         await checkThrowsError(async() => {
             await saveResponses(badUser, []);
         }, UnauthenticatedError);
+        done();
+    });
+});
+
+describe('Test saveResponses invalid input', () => {
+    const user = "badInpSaveResp";
+    test('Submit without starting level should throw error', async (done) => {
+        await checkThrowsError(async() => {
+            await saveResponses(user, []);
+        }, InvalidResultsError);
+        done();
+    });
+
+    test('Submit empty results should throw error', async (done) => {
+        await getVidsAndMakeAnswers(user); // start level
+        await checkThrowsError(async() => {
+            await saveResponses(user, []);
+        }, InvalidResultsError);
+        done();
+    });
+
+    test('Invalidly formatted results should throw error', async (done) => {
+        await getVidsAndMakeAnswers(user);
+        await checkThrowsError(async() => {
+            const invalidResponses = ["some", "random", "words"];
+            await saveResponses(user, invalidResponses);
+        }, InvalidResultsError);
         done();
     });
 });

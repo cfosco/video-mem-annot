@@ -1,5 +1,6 @@
 const { pool, withinTX } = require('./database');
 const debug = require('debug')('memento:server');
+const assert = require('assert');
 
 const VID_TYPES = {
     TARGET_REPEAT: "target_repeat",
@@ -36,6 +37,13 @@ class OutOfVidsError extends Error {
         const message = "User " + username + " is out of videos.";
         super(message);
         this.name = "OutOfVidsError";
+    }
+}
+
+class InvalidResultsError extends Error {
+    constructor(message="Invalid results") {
+        super(message);
+        this.name = "InvalidResultsError";
     }
 }
 
@@ -150,7 +158,7 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   const levels = await pool.query('SELECT id FROM levels'
     + ' WHERE id_user = ? ORDER BY id DESC', userID);
   if (levels.length === 0) {
-    throw new Error('User has no level in progress');
+    throw new InvalidResultsError('User has no level in progress');
   }
   levelID = levels[0].id;
 
@@ -158,7 +166,19 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   const pastResponses = await pool.query('SELECT response FROM presentations'
     + ' WHERE id_level = ? AND response IS NOT NULL LIMIT 1', levelID);
   if (pastResponses.length > 0) {
-    throw new Error('User has no level in progress');
+    throw new InvalidResultsError('User has no level in progress');
+  }
+
+  // check that answers have the correct format (roughly)
+  try {
+      assert(responses.length > 0);
+      responses.forEach((elt) => {
+        const { response, time } = elt;
+        assert(typeof(response) == "boolean");
+        assert(typeof(time) == "number");
+      });
+  } catch(error) {
+    throw new InvalidResultsError('Invalid format for responses.');
   }
 
   var numLives;
@@ -231,5 +251,6 @@ module.exports = {
   saveResponses, 
   BlockedError,
   UnauthenticatedError,
-  OutOfVidsError
+  OutOfVidsError,
+  InvalidResultsError
 };
