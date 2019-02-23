@@ -2,9 +2,9 @@ const mysql = require('promise-mysql');
 const fs = require('fs');
 const path = require('path');
 const debug = require('debug')('memento:server');
-const config = require('./databaseConfig');
+const config = require('../config');
 
-const pool = mysql.createPool(config);
+const pool = mysql.createPool(config.dbConfig);
 
 async function initDB() {
   // read files for database schema and list of video urls
