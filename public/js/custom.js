@@ -448,7 +448,9 @@
                 contentType: 'application/json; charset=utf-8',
                 dataType: 'json'
               }).done(showResultsPage)
-              .catch(showError);
+              .catch(function(err) {
+                showError(err, headerText="Your answers could not be submitted.")
+              });
             }
 
           }
@@ -499,9 +501,10 @@
   /** 
    * Displays an error message received by an API endpoint to the user.
    */
-  function showError(error) {
+  function showError(error, headerText) {
     console.log(error);
-    $("#error-message-text").text(error.responseText);
+    $("#error-message").find(".header").text(headerText);
+    $("#error-message").find("p").text(error.responseText);
     $("#main-interface").hide();
     $("#instructions").hide();  
     $("#experiment").show();
@@ -522,7 +525,9 @@
       $('.level-num').html(res.level);
       setupButtons();
     })
-    .catch(showError);
+    .catch(function(err) {
+      showError(err, headerText="There was a problem loading the game.")
+    });
   });
 
 })();
