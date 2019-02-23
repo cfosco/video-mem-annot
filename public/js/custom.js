@@ -80,7 +80,10 @@
       FILLER: "filler",
     }
     var CLIP_DURATION = 3; // in seconds
-    var DEBUG = false
+    var DEBUG = {
+      speedup: true,
+      fakeSubmit: false
+    }
     var LOAD_VIDEOMEM = false
 
     if (LOAD_VIDEOMEM) {
@@ -412,14 +415,14 @@
           // play next video
           videoElements.shift();
 
-          if (DEBUG) {
+          if (DEBUG.speedup) {
             videoElements = [] // DEBUG
           }
 
           if (videoElements.length > 0) {
             videoElements[0].play();
           } else {
-            if (DEBUG) { // DEBUG
+            if (DEBUG.fakeSubmit) { // DEBUG
               var data = {};
 
               data.overallScore = 0.81
