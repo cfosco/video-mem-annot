@@ -94,20 +94,26 @@
             <!--End of the experiment page-->
             <div id="endGame" style="display:none">
                 <div class="score-container">
-                    <p  id="score-text">Your Score:</p>
+                    <p  id="score-text" class="results-text"></p>
                     <div id="score-radial"
                         data-percentage="0"
                         data-track-width="20"
-                        data-track-colour="555555"
+                        data-track-colour="999999"
                         data-fill-colour="4682b4"
                         data-text-colour="679fce"
                         data-stroke-colour="FFFFFF"
                         data-stroke-spacing="4">
                     </div>
+                    <p id="score-verdict" class="results-text"></p>
+                </div>
+                <div id="lives">
+                    <div id="lives-left">
+                        <p  id="lives-message"></p>
+                    </div>
+                    <!-- <div id="lives-left"></div> -->
                 </div>
     
                 <div class="graphs">
-                    <h3 class="graph-header">Your results so far:</h3>
                     <br>
                     <div class="graph-container">
                         <div id="graph-accuracy" class="graph"></div>
