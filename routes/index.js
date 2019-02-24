@@ -4,7 +4,8 @@ const {
     saveResponses, 
     BlockedError, 
     UnauthenticatedError,
-    OutOfVidsError
+    OutOfVidsError,
+    InvalidResultsError
 } = require('../database/dbops');
 const { getSeqTemplate } = require('../utils/sequence');
 
@@ -20,6 +21,8 @@ function respondToError(err, res) {
     } else if (err instanceof UnauthenticatedError) {
         res.send(401, err.message);
     } else if (err instanceof OutOfVidsError) {
+        res.send(400, err.message);
+    } else if (err instanceof InvalidResultsError) {
         res.send(400, err.message);
     } else {
         res.send(500);

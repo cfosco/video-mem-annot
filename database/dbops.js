@@ -1,5 +1,7 @@
 const { pool, withinTX } = require('./database');
 const debug = require('debug')('memento:server');
+const assert = require('assert');
+const config = require('../config');
 
 const VID_TYPES = {
     TARGET_REPEAT: "target_repeat",
@@ -39,6 +41,13 @@ class OutOfVidsError extends Error {
     }
 }
 
+class InvalidResultsError extends Error {
+    constructor(message="Invalid results") {
+        super(message);
+        this.name = "InvalidResultsError";
+    }
+}
+
 /**
  * @param {string} workerID
  * @return {Promise<number>} userID
@@ -72,21 +81,37 @@ async function getVideos(workerID, seqTemplate) {
   const userID = await getUser(workerID);
   const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
   const user = result[0];
-  if (user.num_lives < 1) {
+  if (user.num_lives < 1 && config.enableBlockUsers) {
     throw new BlockedError(user.worker_id);
   }
 
-  // get N least-seen videos user hasn't seen yet
-  const vidsToShow = await pool.query('SELECT id, uri'
+  // select nTargets least-seen videos user hasn't seen yet
+  const targetVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
     + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
     + ' ORDER BY labels ASC LIMIT ?',
+    [userID, nTargets]
+  );
+
+  // select numVideos vids that user hasn't seen yet randomly 
+  const randomVids = await pool.query('SELECT id, uri'
+    + ' FROM videos WHERE id NOT IN'
+    + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
+    + ' ORDER BY RAND() LIMIT ?',
     [userID, numVideos]
   );
-  if (vidsToShow.length < numVideos) {
+
+  // select fillers by taking the first nFillers vids from the set difference
+  // targetVids - randomVids
+  const targetsSet = new Set(targetVids.map(({id, uri}) => id));
+  const potentialFillers = randomVids.filter(({id, uri}) => !targetsSet.has(id));
+
+  if (potentialFillers.length < nFillers) {
     throw new OutOfVidsError(user.worker_id);
   }
-  
+  const fillerVids = potentialFillers.slice(0, nFillers);
+  const vidsToShow = targetVids.concat(fillerVids);
+ 
   const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
     + 'WHERE id_user = ? AND score IS NOT NULL'
   , userID);
@@ -138,19 +163,19 @@ async function getVideos(workerID, seqTemplate) {
  * @param {Promise<{overallScore: number, vigilanceScore: number, completedLevels: {score: number, reward: number}[]}>}
  * scores are between 0 and 1; reward is (TODO) a dollar value
  */
-async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW_LIFE) {
+async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW_LIFE, errorOnFastSubmit=config.errorOnFastSubmit) {
   // get the most recent level (TODO: validate we should do this)
   const userID = await getUser(workerID);
   const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
   const user = result[0];
-  if (user.num_lives < 1) {
+  if (user.num_lives < 1 && config.enableBlockUsers) {
     throw new BlockedError(user.worker_id);
   }
 
-  const levels = await pool.query('SELECT id FROM levels'
+  const levels = await pool.query('SELECT * FROM levels'
     + ' WHERE id_user = ? ORDER BY id DESC', userID);
   if (levels.length === 0) {
-    throw new Error('User has no level in progress');
+    throw new InvalidResultsError('User has no level in progress');
   }
   levelID = levels[0].id;
 
@@ -158,7 +183,35 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   const pastResponses = await pool.query('SELECT response FROM presentations'
     + ' WHERE id_level = ? AND response IS NOT NULL LIMIT 1', levelID);
   if (pastResponses.length > 0) {
-    throw new Error('User has no level in progress');
+    throw new InvalidResultsError('User has no level in progress');
+  }
+
+  const presentations = await pool.query('SELECT COUNT(*) AS presentationsCount '
+    + 'FROM presentations WHERE id_level = ?', levelID);
+  const levelLen = presentations[0].presentationsCount;
+ 
+  // check that the time elapsed has not been too short 
+  if (errorOnFastSubmit) {
+    // set the minTime to about 1s per video, which should be plenty
+    const minTimeMsec = levelLen*1*1000;
+    const startTimeMsec = new Date(levels[0].insert_time).getTime();
+    const curTimeMsec = new Date().getTime();
+    const timeDiffMsec = curTimeMsec-startTimeMsec;
+    if (timeDiffMsec < minTimeMsec) {
+        throw new InvalidResultsError('Responses were submitted too quickly to complete the level');
+    }
+  }
+
+  // check that answers have the correct format (roughly)
+  try {
+      assert(responses.length == levelLen);
+      responses.forEach((elt) => {
+        const { response, time } = elt;
+        assert(typeof(response) == "boolean");
+        assert(typeof(time) == "number");
+      });
+  } catch(error) {
+    throw new InvalidResultsError('Invalid format for responses.');
   }
 
   var numLives;
@@ -231,5 +284,6 @@ module.exports = {
   saveResponses, 
   BlockedError,
   UnauthenticatedError,
-  OutOfVidsError
+  OutOfVidsError,
+  InvalidResultsError
 };

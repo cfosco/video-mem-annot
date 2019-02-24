@@ -18,8 +18,8 @@
       submitDomain += '/';
     }
     submitUrl = submitDomain + 'mturk/externalSubmit';
-    assignmentId = urlParams.get('assignmentId') || '?';
-    workerId = urlParams.get('workerId') || '?';
+    assignmentId = urlParams.get('assignmentId') || '';
+    workerId = urlParams.get('workerId') || '';
   }
 
   /**
@@ -80,7 +80,10 @@
       FILLER: "filler",
     }
     var CLIP_DURATION = 3; // in seconds
-    var DEBUG = false
+    var DEBUG = {
+      speedup: false,
+      fakeSubmit: false
+    }
     var LOAD_VIDEOMEM = false
 
     if (LOAD_VIDEOMEM) {
@@ -117,19 +120,33 @@
     var checked = false; // don't check video at end if already checked
     var responses = [];
 
-    function showRadialPercentage() {
+    function showRadialPercentage(score, passed) {
+      $('#score-radial').attr("data-percentage", (score * 100).toFixed(0) + '%');
+
       var margin = 40;
 
       var wrapper = document.getElementById('score-radial');
       var start = 0;
       var end = parseFloat(wrapper.dataset.percentage);
 
-      var colours = {
-        fill: '#' + wrapper.dataset.fillColour,
-        track: '#' + wrapper.dataset.trackColour,
-        text: '#' + wrapper.dataset.textColour,
-        stroke: '#' + wrapper.dataset.strokeColour,
+      var colours;
+      if (passed) {
+        colours = {
+          fill: '#' + wrapper.dataset.fillColour,
+          track: '#' + wrapper.dataset.trackColour,
+          text: '#' + wrapper.dataset.textColour,
+          stroke: '#' + wrapper.dataset.strokeColour,
+        }
+      } else {
+        colours = {
+          fill: '#cc0000',
+          track: '#' + wrapper.dataset.trackColour,
+          text: '#660000',
+          stroke: '#' + wrapper.dataset.strokeColour,
+        }
       }
+
+      $('.results-text').css('color', colours.text);
 
       var radius = 100;
       var border = wrapper.dataset.trackWidth;
@@ -211,9 +228,9 @@
      * @param {string} selector
      *    where on the DOM to insert the graph
      */
-    function showGraph(yData, yRange, selector, graphType) {
+    function showGraph(yData, yRange, selector, graphType, graphTitle) {
 
-      if (graphType == 'Scores') {
+      if (graphType == 'scores') {
         var style = 'stroke: steelblue;';
         var fill = ' fill: #679fce;';
         var suffix = '%';
@@ -267,7 +284,7 @@
         .attr("dy", ".71em")
         .attr("x", 5)
         .style("text-anchor", "start")
-        .text(graphType);
+        .text(graphTitle);
 
       svg.append("path")
         .datum(data) // 10. Binds data to the line
@@ -323,16 +340,35 @@
     function showResultsPage(data) {
       $experiment.hide();
       $endGame.show();
-      $('#score-radial').attr("data-percentage", (data.overallScore * 100).toFixed(0) + '%');
+
+      $("#score-verdict").text(data.passed ? "You passed!" : "You failed");
+      $("#score-text").text("Level " + data.completedLevels.length + " Score:")
+      var livesMessage;
+      var iconElts = "";
+      if (data.numLives == 0) {
+        // put a sad face emoji 
+        livesMessage = "You have no lives left. You can no longer play the game."
+        iconElts += '<i class="frown outline icon"></i>';
+
+      } else {
+        var livesWord = data.numLives > 1 ? "lives" : "life";
+        livesMessage = "You have " + data.numLives + " " + livesWord + " left";
+        for (let i = 0; i < data.numLives; i++) {
+          iconElts += '<i class="heart icon"></i>';
+        }
+      }
+      $("#lives-message").text(livesMessage);
+      $("#lives-left").append(iconElts);
+
       var pastScores = data.completedLevels.map(function(d) {
         return Math.floor(d.score * 100);
       });
 
       var earnings = [];
       data.completedLevels.reduce(function(a,b,i) { return earnings[i] = a+b.reward; },0);
-      showRadialPercentage();
-      showGraph(pastScores, [0,100], '#graph-accuracy', 'Scores');
-      showGraph(earnings, [0,earnings[earnings.length-1]+1], '#graph-earnings', 'Earnings ($)');
+      showRadialPercentage(data.overallScore, data.passed);
+      showGraph(pastScores, [0,100], '#graph-accuracy', 'scores', 'Your scores');
+      showGraph(earnings, [0,earnings[earnings.length-1]+1], '#graph-earnings', 'earnings', 'Your earnings ($)');
       $('#submit-button').show();
     }
 
@@ -402,8 +438,7 @@
       videoElements.push(video);
 
       video.ontimeupdate = function () {
-
-        // video.currentTime = CLIP_DURATION //DEBUG
+        //video.currentTime = CLIP_DURATION //DEBUG
 
         if (video.currentTime >= CLIP_DURATION) {
           // check for missed repeat
@@ -414,27 +449,29 @@
           // play next video
           videoElements.shift();
 
-          if (DEBUG) {
+          if (DEBUG.speedup) {
             videoElements = [] // DEBUG
           }
 
           if (videoElements.length > 0) {
             videoElements[0].play();
           } else {
-            if (DEBUG) { // DEBUG
+            if (DEBUG.fakeSubmit) { // DEBUG
               var data = {};
 
               data.overallScore = 0.81
-              data.completedLevels = [{"score":0.3, "reward":1},
-
-              {"score":0.44, "reward":1},
-              {"score":0.56, "reward":1},
-              {"score":0.54, "reward":1},
-              {"score":0.7, "reward":1},
-              {"score":0.83, "reward":1},
-              {"score":0.44, "reward":1},
-              {"score":0.56, "reward":1}
+              data.completedLevels = [
+                {"score":0.3, "reward":1},
+                {"score":0.44, "reward":1},
+                {"score":0.56, "reward":1},
+                {"score":0.54, "reward":1},
+                {"score":0.7, "reward":1},
+                {"score":0.83, "reward":1},
+                {"score":0.44, "reward":1},
+                {"score":0.56, "reward":1}
               ]
+              data.passed = true;
+              data.numLives = 2;
               showResultsPage(data)
             }
             else {
@@ -446,7 +483,10 @@
                 }),
                 contentType: 'application/json; charset=utf-8',
                 dataType: 'json'
-              }).done(showResultsPage);
+              }).done(showResultsPage)
+              .catch(function(err) {
+                showError(err, headerText="Your answers could not be submitted.")
+              });
             }
 
           }
@@ -494,6 +534,19 @@
     }
   }
 
+  /** 
+   * Displays an error message received by an API endpoint to the user.
+   */
+  function showError(error, headerText) {
+    console.log(error);
+    $("#error-message").find(".header").text(headerText);
+    $("#error-message").find("p").text(error.responseText);
+    $("#main-interface").hide();
+    $("#instructions").hide();  
+    $("#experiment").show();
+    $("#error-message").show();
+  }
+
   $(document).ready(function () {
     getURLParams();
     // get videos and start game
@@ -507,6 +560,9 @@
       data.workerId = workerId;
       $('.level-num').html(res.level);
       setupButtons();
+    })
+    .catch(function(err) {
+      showError(err, headerText="There was a problem loading the game.")
     });
   });
 

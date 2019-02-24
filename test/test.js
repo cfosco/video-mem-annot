@@ -8,7 +8,8 @@ const {
     saveResponses,
     BlockedError,
     UnauthenticatedError,
-    OutOfVidsError
+    OutOfVidsError,
+    InvalidResultsError
 } = require('../database/dbops');
 const assert = require('assert');
 // helper functions for use in tests
@@ -31,7 +32,6 @@ function calcAnswers(videos, correct) {
 
 async function getVidsAndMakeAnswers(user, correct=true) {
     const template = getSeqTemplate();
-    const urls = new Set();
     const {videos, level} = await getVideos(user, template);
     return calcAnswers(videos, correct);
 }
@@ -117,7 +117,7 @@ describe('Test increasing levels', () => {
   });
 });
 
-describe('Test dbOps with invalid user', () => {
+describe('Test dbops with invalid user', () => {
     const badUser = "";
     test('getVideos should throw error', async (done) => {
         await checkThrowsError(async() => {
@@ -132,6 +132,76 @@ describe('Test dbOps with invalid user', () => {
         }, UnauthenticatedError);
         done();
     });
+});
+
+describe('Test saveResponses invalid input', () => {
+    const user = "badInpSaveResp";
+    test('Submit without starting level should throw error', async (done) => {
+        await checkThrowsError(async() => {
+            await saveResponses(user, []);
+        }, InvalidResultsError);
+        done();
+    });
+
+    test('Submit empty results should throw error', async (done) => {
+        await getVidsAndMakeAnswers(user); // start level
+        await checkThrowsError(async() => {
+            await saveResponses(user, []);
+        }, InvalidResultsError);
+        done();
+    });
+
+    test('Invalidly formatted results should throw error', async (done) => {
+        await getVidsAndMakeAnswers(user);
+        await checkThrowsError(async() => {
+            const invalidResponses = ["some", "random", "words"];
+            await saveResponses(user, invalidResponses);
+        }, InvalidResultsError);
+        done();
+    });
+});
+
+describe('Test errorOnFastSubmit', () => {
+    test('Answers submitted too quickly should throw error', async (done) => {
+        await checkThrowsError(async() => {
+            const user = "errFastSubmit";
+            const responses = await getVidsAndMakeAnswers(user);
+            await saveResponses(
+                user, 
+                responses, 
+                levelsPerLife=50,
+                errorOnFastSubmit=true
+            );
+        }, InvalidResultsError);
+        done();
+    });
+
+    test('Answers submitted after a reasonable delay should be accepted', async (done) => {
+        const user = "accSlowSubmit";
+        const shortTemplate = [0, 1, [[0, "filler"]]];
+        const {videos, level} = await getVideos(user, shortTemplate);
+        const correctResponses = calcAnswers(videos, true);
+        // wait a couple secs to submit
+        const msecToWait = 2000;
+        const {
+          overallScore,
+          vigilanceScore,
+          numLives,
+          passed,
+          completedLevels
+        } = await new Promise(resolve => {
+            setTimeout(() => {
+                resolve(saveResponses(
+                    user,   
+                    correctResponses,
+                    levelsPerLife=50,
+                    errorOnFastSubmit=true
+                ));
+            }, msecToWait);
+        }); 
+        expect(overallScore).toBe(1);
+        done();
+    }, 3000);
 });
 
 describe('Test save answers', () => {
