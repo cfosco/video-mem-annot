@@ -13,7 +13,7 @@
             "Press SPACEBAR when you see a video that has been shown already.",
             "If your accuracy is good, you will be able to advance to the next level!"
         ],
-        "images": []
+        "images": ["gif_intro.gif","gif_green_flash.gif","gif_red_flash.gif"]
     },
     "hitCreation": {
         "title": "Memento: The Video Memory Game",
