@@ -339,6 +339,46 @@
 
     }
 
+    /** 
+     * Submits task data to our database 
+     */
+    function submitData() {
+      if (DEBUG.fakeSubmit) {
+        var data = {};
+
+        data.overallScore = 0.81
+        data.completedLevels = [
+          {"score":0.3, "reward":1},
+          {"score":0.44, "reward":1},
+          {"score":0.56, "reward":1},
+          {"score":0.54, "reward":1},
+          {"score":0.7, "reward":1},
+          {"score":0.83, "reward":1},
+          {"score":0.44, "reward":1},
+          {"score":0.56, "reward":1}
+        ]
+        data.passed = true;
+        data.numLives = 2;
+        showResultsPage(data)
+      } else {
+        var payload = {
+          workerID: workerId,
+          levelID: levelID,
+          responses: responses, 
+          inputs: taskData
+        }
+        $.post({
+          url: "api/end/",
+          data: JSON.stringify(payload),
+          contentType: 'application/json; charset=utf-8',
+          dataType: 'json'
+        }).done(showResultsPage)
+        .catch(function(err) {
+          showError(err, headerText="Your answers could not be submitted.")
+        });
+      }
+    }
+
     /**
      * Called when the level is over
      * @param {object} data the response body for /api/done
@@ -351,7 +391,7 @@
       $("#score-text").text("Level " + data.completedLevels.length + " Score:")
       var livesMessage;
       var iconElts = "";
-      if (data.numLives == 0) {
+      if (data.numLives <= 0) {
         // put a sad face emoji 
         livesMessage = "You have no lives left. You can no longer play the game."
         iconElts += '<i class="frown outline icon"></i>';
@@ -443,8 +483,6 @@
       videoElements.push(video);
 
       video.ontimeupdate = function () {
-        //video.currentTime = CLIP_DURATION //DEBUG
-
         if (video.currentTime >= CLIP_DURATION) {
           // check for missed repeat
           handleCheck(false, false);
@@ -455,56 +493,35 @@
           videoElements.shift();
 
           if (videoElements.length > 0) {
-            videoElements[0].play();
+            //const vidToPlay = videoElements[0];
+            playWhenReady(videoElements[0]);
+
+            //videoElements[0].play();
+            // queue up another video
+            if (counter < transcripts.length) {
+              newVideo(transcripts[counter], types[counter]);
+            }
+            // update progress bar
+            $progressBar.progress("set progress", counter - NUM_LOAD_AHEAD);
+            // update state
+            counter += 1;
+            checked = false;
           } else {
-            if (DEBUG.fakeSubmit) {
-              var data = {};
-
-              data.overallScore = 0.81
-              data.completedLevels = [
-                {"score":0.3, "reward":1},
-                {"score":0.44, "reward":1},
-                {"score":0.56, "reward":1},
-                {"score":0.54, "reward":1},
-                {"score":0.7, "reward":1},
-                {"score":0.83, "reward":1},
-                {"score":0.44, "reward":1},
-                {"score":0.56, "reward":1}
-              ]
-              data.passed = true;
-              data.numLives = 2;
-              showResultsPage(data)
-            }
-            else {
-              var payload = {
-                workerID: workerId,
-                levelID: levelID,
-                responses: responses, 
-                inputs: taskData
-              }
-              $.post({
-                url: "api/end/",
-                data: JSON.stringify(payload),
-                contentType: 'application/json; charset=utf-8',
-                dataType: 'json'
-              }).done(showResultsPage)
-              .catch(function(err) {
-                showError(err, headerText="Your answers could not be submitted.")
-              });
-            }
-
+            submitData();
           }
-          // queue up another video
-          if (counter < transcripts.length) {
-            newVideo(transcripts[counter], types[counter]);
-          }
-          // update progress bar
-          $progressBar.progress("set progress", counter - NUM_LOAD_AHEAD);
-          // update state
-          counter += 1;
-          checked = false;
         }
       }
+    }
+
+    function playWhenReady(vidToPlay) {
+      function playIfReady() {
+        console.log("checking if ready", vidToPlay.readyState);
+        if (vidToPlay.readyState == 4) {
+          vidToPlay.play();
+        }
+      }
+      vidToPlay.oncanplaythrough = playIfReady;
+      playIfReady();
     }
 
     // HANDLE KEYPRESS (Spacebar)
@@ -535,7 +552,8 @@
       newVideo(transcripts[counter], types[counter]);
     }
     if (!SHOW_PLAY_PAUSE) {
-      videoElements[0].play();
+      //videoElements[0].play();
+      playWhenReady(videoElements[0]);
     }
   }
 
