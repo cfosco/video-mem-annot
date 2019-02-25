@@ -10,6 +10,8 @@ const dev = {
   }, 
   enableBlockUsers    : false,
   errorOnFastSubmit   : false,
+  enforceSameInputs   : true,
+  rewardAmount        : 1,
 } 
 
 const test = {
@@ -22,6 +24,8 @@ const test = {
   }, 
   enableBlockUsers    : true,
   errorOnFastSubmit   : false,
+  enforceSameInputs   : true,
+  rewardAmount        : 1,
 }
 
 // TODO: specify a prod config

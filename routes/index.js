@@ -30,7 +30,7 @@ function respondToError(err, res) {
 }
 
 router.post('/start', (req, res) => {
-  getVideos(req.body.workerID, getSeqTemplate())
+  getVideos(req.body, getSeqTemplate())
     .then(body => res.send(body))
     .catch((err) => {
         respondToError(err, res);
@@ -38,7 +38,12 @@ router.post('/start', (req, res) => {
 });
 
 router.post('/end', (req, res) => {
-  saveResponses(req.body.workerID, req.body.responses)
+  saveResponses(
+    req.body.workerID, 
+    req.body.levelID, 
+    req.body.responses, 
+    req.body.inputs
+  )
     .then(body => res.send(body))
     .catch((err) => {
         respondToError(err, res);

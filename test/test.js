@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../app');
 const debug = require('debug')('memento:server');
+const config = require('../config');
 const { pool, initDB } = require('../database/database');
 const { getSeqTemplate } = require('../utils/sequence');
 const {
@@ -32,8 +33,10 @@ function calcAnswers(videos, correct) {
 
 async function getVidsAndMakeAnswers(user, correct=true) {
     const template = getSeqTemplate();
-    const {videos, level} = await getVideos(user, template);
-    return calcAnswers(videos, correct);
+    const inputs = await getVideos({workerID: user}, template);
+    const {videos, level} = inputs;
+    const answers = calcAnswers(videos, correct);
+    return { answers, inputs };
 }
 
 async function checkThrowsError(asyncFunc, errorClass) {
@@ -71,9 +74,10 @@ describe('Test get sequence template', () => {
 
 describe('Test get videos', () => {
   test('It should return data in the correct format', async (done) => {
-    const template = getSeqTemplate(); // TODO: use a custom template
+    const user = 'test1';
+    const template = getSeqTemplate(); 
     const [nTargets, nFillers, ordering] = template;
-    const {videos, level} = await getVideos('test1', template);
+    const {videos, level} = await getVideos({workerID: user}, template);
 
     expect(videos.length).toBe(ordering.length);
     expect(level).toBe(1);
@@ -90,9 +94,10 @@ describe('Test get videos', () => {
 
   // Tested with 100 iterations but that takes a while
   test('It should never repeat urls', async (done) => {
+    const user = 'test2';
     const urls = new Set();
     for (let i = 1; i < 10; i += 1) {
-      const {videos, level} = await getVideos('test2', getSeqTemplate());
+      const {videos, level} = await getVideos({workerID: user}, getSeqTemplate());
       expect(level).toBe(1);
       const sequenceURLs = new Set(videos.map((elt) => elt.url));
       sequenceURLs.forEach(url => {
@@ -102,16 +107,34 @@ describe('Test get videos', () => {
     }
     done();
   }, 30000);
+
+  test('It should save assignment id and hit id if provided', async (done) => {
+    const user = 'saveAid';
+    const assignmentID = "aid";
+    const hitID = "hid";
+    const inputData = {
+        workerID: user, 
+        assignmentID,
+        hitID
+    }
+    const inputs = await getVideos(inputData, getSeqTemplate());
+    // query the db and make sure stuff was saved
+    const dbResult = await pool.query("SELECT * FROM levels WHERE id = ?", inputs.levelID);
+    expect(dbResult[0].assignment_id).toEqual(assignmentID);
+    expect(dbResult[0].hit_id).toEqual(hitID);
+    done();
+  });
 });
 
 describe('Test increasing levels', () => {
   test('Levels should increase', async (done) => {
     const username = 'testIncLevel';
     for (let i = 1; i <=3; i++) {
-      const {videos, level} = await getVideos(username, getSeqTemplate());
+      const inputs = await getVideos({workerID: username}, getSeqTemplate());
+      const {videos, level, levelID} = inputs;
       expect(level).toBe(i);
       const answers = calcAnswers(videos, correct=true);
-      await saveResponses(username, answers);
+      await saveResponses(username, levelID, answers, inputs);
     }
     done();
   });
@@ -121,14 +144,14 @@ describe('Test dbops with invalid user', () => {
     const badUser = "";
     test('getVideos should throw error', async (done) => {
         await checkThrowsError(async() => {
-            await getVideos(badUser, getSeqTemplate());
+            await getVideos({workerID: badUser}, getSeqTemplate());
         }, UnauthenticatedError);
         done();
     });
 
     test('saveResponses should throw error', async (done) => {
         await checkThrowsError(async() => {
-            await saveResponses(badUser, []);
+            await saveResponses(badUser, -1, [], {});
         }, UnauthenticatedError);
         done();
     });
@@ -138,24 +161,37 @@ describe('Test saveResponses invalid input', () => {
     const user = "badInpSaveResp";
     test('Submit without starting level should throw error', async (done) => {
         await checkThrowsError(async() => {
-            await saveResponses(user, []);
+            await saveResponses(user, -1, [], {});
         }, InvalidResultsError);
         done();
     });
 
     test('Submit empty results should throw error', async (done) => {
-        await getVidsAndMakeAnswers(user); // start level
+        const { answers, inputs } = await getVidsAndMakeAnswers(user); // start level
         await checkThrowsError(async() => {
-            await saveResponses(user, []);
+            await saveResponses(user, -1, [], inputs);
         }, InvalidResultsError);
         done();
     });
 
     test('Invalidly formatted results should throw error', async (done) => {
-        await getVidsAndMakeAnswers(user);
+        const { answers, inputs } = await getVidsAndMakeAnswers(user);
         await checkThrowsError(async() => {
             const invalidResponses = ["some", "random", "words"];
-            await saveResponses(user, invalidResponses);
+            await saveResponses(user, inputs.levelID, invalidResponses, inputs);
+        }, InvalidResultsError);
+        done();
+    });
+
+    test('Inconsistent inputs', async (done) => {
+        const { answers, inputs } = await getVidsAndMakeAnswers(user);
+        await checkThrowsError(async() => {
+            // modify inputs in some way
+            inputs.videos[0] = {
+                url: "http://some-random-url.com/some-random-vid",
+                type: "filler"
+            };
+            await saveResponses(user, inputs.levelID, answers, inputs);
         }, InvalidResultsError);
         done();
     });
@@ -165,10 +201,13 @@ describe('Test errorOnFastSubmit', () => {
     test('Answers submitted too quickly should throw error', async (done) => {
         await checkThrowsError(async() => {
             const user = "errFastSubmit";
-            const responses = await getVidsAndMakeAnswers(user);
+            const { answers, inputs } = await getVidsAndMakeAnswers(user);
             await saveResponses(
                 user, 
-                responses, 
+                inputs.levelID,
+                answers, 
+                inputs, 
+                reward=1,
                 levelsPerLife=50,
                 errorOnFastSubmit=true
             );
@@ -179,7 +218,8 @@ describe('Test errorOnFastSubmit', () => {
     test('Answers submitted after a reasonable delay should be accepted', async (done) => {
         const user = "accSlowSubmit";
         const shortTemplate = [0, 1, [[0, "filler"]]];
-        const {videos, level} = await getVideos(user, shortTemplate);
+        const inputs = await getVideos({workerID: user}, shortTemplate);
+        const {videos, level, levelID} = inputs;
         const correctResponses = calcAnswers(videos, true);
         // wait a couple secs to submit
         const msecToWait = 2000;
@@ -193,7 +233,10 @@ describe('Test errorOnFastSubmit', () => {
             setTimeout(() => {
                 resolve(saveResponses(
                     user,   
+                    levelID,
                     correctResponses,
+                    inputs, 
+                    reward=1,
                     levelsPerLife=50,
                     errorOnFastSubmit=true
                 ));
@@ -207,20 +250,21 @@ describe('Test errorOnFastSubmit', () => {
 describe('Test save answers', () => {
   test('It should save the answers', async (done) => {
     const username = 'test3';
-    const answers = await getVidsAndMakeAnswers(username);
+    const { answers, inputs } = await getVidsAndMakeAnswers(username);
     const {
       overallScore,
       vigilanceScore,
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, answers);
+    } = await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
     expect(overallScore).toEqual(1);
     expect(numLives).toEqual(2);
     expect(vigilanceScore).toEqual(1);
     expect(passed).toBe(true);
     expect(completedLevels).toHaveLength(1);
     expect(completedLevels[0].score).toEqual(1);
+    expect(completedLevels[0].reward).toEqual(.5);
     done();
   });
 });
@@ -229,14 +273,22 @@ describe('Test lives increment when correct', () => {
   test('Lives should increment at levelsPerLife', async (done) => {
     const username = 'testLivesInc';
     for (let i = 1; i <= 5; i++) {
-        const answers = await getVidsAndMakeAnswers(username);
+        const { answers, inputs } = await getVidsAndMakeAnswers(username);
         const {
           overallScore,
           vigilanceScore,
           numLives,
           passed,
           completedLevels
-        } = await saveResponses(username, answers, levelsPerLife=3);
+        } = await saveResponses(
+            username, 
+            inputs.levelID, 
+            answers, 
+            inputs, 
+            reward=1,
+            levelsPerLife=3
+        );
+        expect(completedLevels.length).toEqual(i);
         if (i >= 3) {
             expect(numLives).toEqual(3);
         } else {
@@ -247,26 +299,144 @@ describe('Test lives increment when correct', () => {
   });
 });
 
-describe('Test failure on first round', () => {
-  test('Failure on first round should produce 0 lives', async (done) => {
-    const username = 'testFailFirst';
-    wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+describe('Test rewards', () => {
+  test('Rewards are stored per-level and should be consistent', async (done) => {
+    const username = 'testRewards';
+    var responses;
+    for (let i = 0; i < 5; i++) {
+        const { answers, inputs } = await getVidsAndMakeAnswers(username);
+        responses = await saveResponses(
+            username, 
+            inputs.levelID, 
+            answers, 
+            inputs, 
+            reward=i
+        );
+        const levels = responses.completedLevels;
+        expect(levels[levels.length-1].reward).toEqual(i);
+    }
     const {
       overallScore,
       vigilanceScore,
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, wrongAnswers);
+    } = responses;
+    responses.completedLevels.forEach(({ score, reward }, i) => {
+        expect(reward).toEqual(i);
+    });
+    done();
+  });
+
+  test('Rewards should be assigned even when someone fails a level', async(done) => {
+    const username = 'testRewardsFailed';
+    const { answers, inputs } = await getVidsAndMakeAnswers(username, correct=false);
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses(
+        username, 
+        inputs.levelID, 
+        answers, 
+        inputs, 
+        reward=1,
+    );
+    expect(passed).toBe(false);
+    expect(numLives).toBe(0);
+    expect(completedLevels[completedLevels.length-1].reward).toEqual(1);
+    done();
+  });
+});
+
+
+
+describe('Test level concurrency', () => {
+    test('Level results should be properly matched when multiple levels are open', async (done) => {
+        const username = "multipleLevels";
+        const openLevelsData = [];
+        const levelsPerLife = 100;
+        for (let i = 0; i < 2; i++) {
+            let startData = await getVidsAndMakeAnswers(username);
+            openLevelsData.push(startData);
+        }
+        var expectedLevel = 1;
+        var expectedLives = 2;
+        for (let i = 0; i < openLevelsData.length; i++) {
+            // submit the data in the same order
+            let { answers, inputs } = openLevelsData[i];
+            let {
+              overallScore,
+              vigilanceScore,
+              numLives,
+              passed,
+              completedLevels
+            } = await saveResponses(
+                username, 
+                inputs.levelID, 
+                answers, 
+                inputs, 
+                reward=1,
+                levelsPerLife
+            );
+            expect(overallScore).toBe(1);
+            expect(vigilanceScore).toBe(1);
+            expect(numLives).toBe(2);
+            expect(passed).toBe(true);
+            expect(completedLevels.length).toBe(i+1);
+        }
+        done();
+    });
+
+    test('Level num should only increment on submit', async (done) => {
+        const username = "lotsOLevels";
+        const openLevelsData = [];
+        for (let i = 0; i < 3; i++) {
+            const startData = await getVidsAndMakeAnswers(username);
+            openLevelsData.push(startData);
+            expect(startData.inputs.level).toBe(1);
+        }
+        for (let i = 0; i < openLevelsData.length; i++) {
+            const levelToSubmit = openLevelsData.length -i -1;
+            let { answers, inputs } = openLevelsData[i];
+            let {
+              overallScore,
+              vigilanceScore,
+              numLives,
+              passed,
+              completedLevels
+            } = await saveResponses(username, inputs.levelID, answers, inputs);
+            expect(completedLevels.length).toBe(i+1);
+        }
+        done();
+    });
+});
+
+describe('Test failure on first round', () => {
+  test('Failure on first round should produce 0 lives', async (done) => {
+    const username = 'testFailFirst';
+    const { answers, inputs } = await getVidsAndMakeAnswers(
+        username, 
+        correct=false
+    );
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses(username, inputs.levelID, answers, inputs);
     expect(numLives).toEqual(0);
     expect(passed).toBe(false);
 
     await checkThrowsError(async () => {
-        await getVideos(username, getSeqTemplate());
+        await getVideos({workerID: username}, getSeqTemplate());
     }, BlockedError);
 
     await checkThrowsError(async() => {
-        await saveResponses(username, []);
+        await saveResponses(username, -1, [], {});
     }, BlockedError);
 
     done();
@@ -276,34 +446,38 @@ describe('Test failure on first round', () => {
 describe('Test failure on later rounds', () => {
   test('Failure on later rounds should decrement lives', async (done) => {
     const username = 'testFailLater';
-    const rightAnswers = await getVidsAndMakeAnswers(username);
+    const { answers: rightAnswers, inputs: rightInputs } = await getVidsAndMakeAnswers(username);
     const {
       overallScore,
       vigilanceScore,
       numLives,
       completedLevels
-    } = await saveResponses(username, rightAnswers);
+    } = await saveResponses(username, rightInputs.levelID, rightAnswers, rightInputs);
     expect(numLives).toEqual(2);
+
     var finalLives;
     for (let i = 0; i < 2; i++) {
-      const wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+      let { answers: wrongAnswers, inputs: wrongInputs } = await getVidsAndMakeAnswers(
+        username, 
+        correct=false  
+      );
       const {
         overallScore,
         vigilanceScore,
         numLives,
         passed,
         completedLevels
-      } = await saveResponses(username, wrongAnswers);
+      } = await saveResponses(username, wrongInputs.levelID, wrongAnswers, wrongInputs);
       expect(passed).toBe(false);
       finalLives = numLives;
     }
     expect(finalLives).toEqual(0);
     await checkThrowsError(async () => {
-        await getVideos(username, getSeqTemplate());
+        await getVideos({workerID: username}, getSeqTemplate());
     }, BlockedError);
 
     await checkThrowsError(async() => {
-        await saveResponses(username, []);
+        await saveResponses(username, -1, [], {});
     }, BlockedError);
 
     done();
@@ -330,14 +504,17 @@ describe('Test game start blocked user', () => {
   test('start should throw 403', async (done) => {
     const username = 'startBlocked';
     // block the user
-    const wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+    const { answers, inputs }  = await getVidsAndMakeAnswers(
+        username, 
+        correct=false
+    );
     const {
       overallScore,
       vigilanceScore,
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, wrongAnswers);
+    } = await saveResponses(username, inputs.levelID, answers, inputs);
     expect(numLives).toBe(0);
     request(app)
       .post('/api/start')
@@ -352,12 +529,11 @@ describe('Test game start blocked user', () => {
 
 describe('Test game end', () => {
   test('It should return the scores', async (done) => {
-    const template = getSeqTemplate();
-    const {videos, level} = await getVideos('test5', template);
-    const answers = calcAnswers(videos, correct=true);
+    const user = 'test5'
+    const { answers, inputs } = await getVidsAndMakeAnswers(user);
     request(app)
       .post('/api/end')
-      .send({ workerID: 'test5', responses: answers})
+      .send({ workerID: user, levelID: inputs.levelID, responses: answers, inputs })
       .expect(200)
       .end((err, res) => {
         if (err) return done(err);
@@ -373,6 +549,9 @@ describe('Test game end', () => {
         expect(passed).toBe(true);
         expect(numLives).toBe(2);
         expect(completedLevels.length).toBe(1);
+        const { score, reward } = completedLevels[0];
+        expect(score).toEqual(1);
+        expect(reward).toEqual(config.rewardAmount);
         done();
       })
   });
@@ -382,19 +561,22 @@ describe('Test game end blocked user', () => {
   test('Game end should return 403', async (done) => {
     const username = 'endBlocked';
     // block the user
-    const wrongAnswers = await getVidsAndMakeAnswers(username, correct=false);
+    const { answers: wrongAnswers, inputs: wrongInputs } = await getVidsAndMakeAnswers(
+        username, 
+        correct=false
+    );
     const {
       overallScore,
       vigilanceScore,
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, wrongAnswers);
+    } = await saveResponses(username, wrongInputs.levelID, wrongAnswers, wrongInputs);
     expect(numLives).toBe(0);
 
     request(app)
       .post('/api/end')
-      .send({ workerID: username, responses: []})
+      .send({ workerID: username, levelID: -1, responses: [], inputs: {}})
       .expect(403)
       .end((err, res) => {
         if (err) return done(err);
