@@ -1,6 +1,10 @@
 # Generalized MTurk Task Template
 A general-purpose template for Amazon Mechanical Turk tasks.
 
+### Getting Data
+Run `./dump_db.sh databasename username` (it will then ask for the mysql
+password) to download tables and save them to tab-separated values files.
+
 ### Development
 The first time you clone: `npm install`
 
