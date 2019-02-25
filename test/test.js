@@ -676,15 +676,15 @@ describe('Test video prioritization', () => {
     const nLowPri = 10;
 
     beforeEach(async (done) => {
-        await wipeDB(populateVideos=false);
-        // add high and low pri vids to the db
-        for (let i = 0; i < nHighPri; i++) {
-            await pool.query("INSERT INTO videos (uri) VALUES (?)", i);
-        }
-        for (let i = nHighPri; i < nLowPri+nHighPri; i++) {
-            await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, 10]);
-        }
-        done();
+      await wipeDB(populateVideos=false);
+      // add high and low pri vids to the db
+      for (let i = 0; i < nHighPri; i++) {
+          await pool.query("INSERT INTO videos (uri) VALUES (?)", i);
+      }
+      for (let i = nHighPri; i < nLowPri+nHighPri; i++) {
+          await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, 10]);
+      }
+      done();
     }, 10000);
 
     afterEach(async (done) => {
@@ -693,46 +693,46 @@ describe('Test video prioritization', () => {
     }, 10000);
 
     test('Targets should be chosen based on priority', async (done) => {
-        const username = "testTargetPriority";
-        const nTarget = 3;
-        const nFiller = 5;
-        const order = [];
-        for (let i = 0; i < nTarget; i++) {
-            order.push([i, "target"]);
-        }
-        for (let i = 0; i < nFiller; i++) {
-            order.push([i, "filler"]);
-        }
-        const template = [nTarget, nFiller, order];
-        const {videos} = await getVideos({workerID: username}, template);
+      const username = "testTargetPriority";
+      const nTarget = 3;
+      const nFiller = 5;
+      const order = [];
+      for (let i = 0; i < nTarget; i++) {
+          order.push([i, "target"]);
+      }
+      for (let i = 0; i < nFiller; i++) {
+          order.push([i, "filler"]);
+      }
+      const template = [nTarget, nFiller, order];
+      const {videos} = await getVideos({workerID: username}, template);
 
-        // check that the first several are all high-pri videos
-        for (let i = 0; i < nTarget; i++) {
-            const vidid = parseInt(videos[i].url);
-            assert(parseInt(videos[i].url) < nHighPri, "target should be a high-pri video");
-        }
-        done();
-    }, 3000);
+      // check that the first several are all high-pri videos
+      for (let i = 0; i < nTarget; i++) {
+          const vidid = parseInt(videos[i].url);
+          assert(parseInt(videos[i].url) < nHighPri, "target should be a high-pri video");
+      }
+      done();
+    }, 10000);
 
     test('Fillers should be chosen randomly', async (done) => {
-        const username = "testFillerPriority";
-        // make sure it is possible that all vids come from one category
-        const nVids = Math.min(nHighPri, nLowPri);
-        const order = [];
-        for (let i = 0; i < nVids; i++) {
-            order.push([i, "filler"]);
-        }
-        const template = [0, nVids, order];
-        const { videos } = await getVideos({workerID: username}, template);
-        // check that there is a mix of vid types 
-        var nActualHigh = 0;
-        var nActualLow = 0;
-        videos.map(({ url }) => {
-            const vidid = parseInt(url);
-            return parseInt(url) < nHighPri ? nActualHigh++ : nActualLow++;
-        });        
-        assert (nActualHigh > 0, "Warning; fillers were all low-pri");
-        assert (nActualLow > 0, "Warning: fillers were all high-pri");
-        done();
-    });
+      const username = "testFillerPriority";
+      // make sure it is possible that all vids come from one category
+      const nVids = Math.min(nHighPri, nLowPri);
+      const order = [];
+      for (let i = 0; i < nVids; i++) {
+          order.push([i, "filler"]);
+      }
+      const template = [0, nVids, order];
+      const { videos } = await getVideos({workerID: username}, template);
+      // check that there is a mix of vid types 
+      var nActualHigh = 0;
+      var nActualLow = 0;
+      videos.map(({ url }) => {
+          const vidid = parseInt(url);
+          return parseInt(url) < nHighPri ? nActualHigh++ : nActualLow++;
+      });        
+      assert (nActualHigh > 0, "Warning; fillers were all low-pri");
+      assert (nActualLow > 0, "Warning: fillers were all high-pri");
+      done();
+    }, 10000);
 });
