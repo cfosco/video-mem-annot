@@ -32,7 +32,7 @@ function calcAnswers(videos, correct) {
 
 async function getVidsAndMakeAnswers(user, correct=true) {
     const template = getSeqTemplate();
-    const inputs = await getVideos(user, template);
+    const inputs = await getVideos({workerID: user}, template);
     const {videos, level} = inputs;
     const answers = calcAnswers(videos, correct);
     return { answers, inputs };
@@ -73,9 +73,10 @@ describe('Test get sequence template', () => {
 
 describe('Test get videos', () => {
   test('It should return data in the correct format', async (done) => {
-    const template = getSeqTemplate(); // TODO: use a custom template
+    const user = 'test1';
+    const template = getSeqTemplate(); 
     const [nTargets, nFillers, ordering] = template;
-    const {videos, level} = await getVideos('test1', template);
+    const {videos, level} = await getVideos({workerID: user}, template);
 
     expect(videos.length).toBe(ordering.length);
     expect(level).toBe(1);
@@ -92,9 +93,10 @@ describe('Test get videos', () => {
 
   // Tested with 100 iterations but that takes a while
   test('It should never repeat urls', async (done) => {
+    const user = 'test2';
     const urls = new Set();
     for (let i = 1; i < 10; i += 1) {
-      const {videos, level} = await getVideos('test2', getSeqTemplate());
+      const {videos, level} = await getVideos({workerID: user}, getSeqTemplate());
       expect(level).toBe(1);
       const sequenceURLs = new Set(videos.map((elt) => elt.url));
       sequenceURLs.forEach(url => {
@@ -104,13 +106,30 @@ describe('Test get videos', () => {
     }
     done();
   }, 30000);
+
+  test('It should save assignment id and hit id if provided', async (done) => {
+    const user = 'saveAid';
+    const assignmentID = "aid";
+    const hitID = "hid";
+    const inputData = {
+        workerID: user, 
+        assignmentID,
+        hitID
+    }
+    const inputs = await getVideos(inputData, getSeqTemplate());
+    // query the db and make sure stuff was saved
+    const dbResult = await pool.query("SELECT * FROM levels WHERE id = ?", inputs.levelID);
+    expect(dbResult[0].assignment_id).toEqual(assignmentID);
+    expect(dbResult[0].hit_id).toEqual(hitID);
+    done();
+  });
 });
 
 describe('Test increasing levels', () => {
   test('Levels should increase', async (done) => {
     const username = 'testIncLevel';
     for (let i = 1; i <=3; i++) {
-      const inputs = await getVideos(username, getSeqTemplate());
+      const inputs = await getVideos({workerID: username}, getSeqTemplate());
       const {videos, level, levelID} = inputs;
       expect(level).toBe(i);
       const answers = calcAnswers(videos, correct=true);
@@ -124,7 +143,7 @@ describe('Test dbops with invalid user', () => {
     const badUser = "";
     test('getVideos should throw error', async (done) => {
         await checkThrowsError(async() => {
-            await getVideos(badUser, getSeqTemplate());
+            await getVideos({workerID: badUser}, getSeqTemplate());
         }, UnauthenticatedError);
         done();
     });
@@ -197,7 +216,7 @@ describe('Test errorOnFastSubmit', () => {
     test('Answers submitted after a reasonable delay should be accepted', async (done) => {
         const user = "accSlowSubmit";
         const shortTemplate = [0, 1, [[0, "filler"]]];
-        const inputs = await getVideos(user, shortTemplate);
+        const inputs = await getVideos({workerID: user}, shortTemplate);
         const {videos, level, levelID} = inputs;
         const correctResponses = calcAnswers(videos, true);
         // wait a couple secs to submit
@@ -353,7 +372,7 @@ describe('Test failure on first round', () => {
     expect(passed).toBe(false);
 
     await checkThrowsError(async () => {
-        await getVideos(username, getSeqTemplate());
+        await getVideos({workerID: username}, getSeqTemplate());
     }, BlockedError);
 
     await checkThrowsError(async() => {
@@ -394,7 +413,7 @@ describe('Test failure on later rounds', () => {
     }
     expect(finalLives).toEqual(0);
     await checkThrowsError(async () => {
-        await getVideos(username, getSeqTemplate());
+        await getVideos({workerID: username}, getSeqTemplate());
     }, BlockedError);
 
     await checkThrowsError(async() => {

@@ -30,7 +30,7 @@ function respondToError(err, res) {
 }
 
 router.post('/start', (req, res) => {
-  getVideos(req.body.workerID, getSeqTemplate())
+  getVideos(req.body, getSeqTemplate())
     .then(body => res.send(body))
     .catch((err) => {
         respondToError(err, res);

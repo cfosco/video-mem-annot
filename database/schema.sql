@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS users (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  worker_id VARCHAR(15) UNIQUE NOT NULL,
+  worker_id VARCHAR(255) UNIQUE NOT NULL,
   num_lives INT DEFAULT 1
 );
 
@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS videos (
 CREATE TABLE IF NOT EXISTS levels (
   id INT PRIMARY KEY AUTO_INCREMENT,
   id_user INT NOT NULL,
+  assignment_id VARCHAR(255),
+  hit_id VARCHAR(255),
   inputs_hash VARCHAR(64),
   FOREIGN KEY(id_user) REFERENCES users(id),
   score DECIMAL(10,9),

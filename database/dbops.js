@@ -78,7 +78,9 @@ async function getUser(workerID) {
  * @param {[number, boolean][]} sequence index, vigilance
  * @return {Promise<string[]>} list of video urls
  */
-async function getVideos(workerID, seqTemplate) {
+async function getVideos(data, seqTemplate) {
+  const workerID = data.workerID;
+ 
   const [nTargets, nFillers, ordering] = seqTemplate;
   const numVideos = nTargets + nFillers;
 
@@ -115,6 +117,21 @@ async function getVideos(workerID, seqTemplate) {
   }
   const fillerVids = potentialFillers.slice(0, nFillers);
   const vidsToShow = targetVids.concat(fillerVids);
+
+  // prepare SQL to insert level
+  var sqlFields = "id_user";
+  var sqlQuestionmarks = "?";
+  var sqlValues = [userID];
+  if (data.assignmentID) {
+    sqlFields += ", assignment_id";
+    sqlQuestionmarks += ", ?";
+    sqlValues.push(data.assignmentID);
+  }
+  if (data.hitID) {
+    sqlFields += ", hit_id";
+    sqlQuestionmarks += ", ?";
+    sqlValues.push(data.hitID);
+  }
  
   var taskInputs;
   await withinTX(async (connection) => {
@@ -126,7 +143,7 @@ async function getVideos(workerID, seqTemplate) {
 
     // create a level
     const result = await connection.query('INSERT INTO levels '
-        + '(id_user) VALUES (?)', userID);
+        + '(' + sqlFields + ') VALUES (' + sqlQuestionmarks + ')', sqlValues);
     const levelID = result.insertId;
 
     // compose and hash the client-side inputs to the level

@@ -3,6 +3,7 @@
   // populated from query
   var assignmentId;
   var workerId;
+  var hitId;
   var submitUrl;
 
   // populated from server
@@ -28,6 +29,7 @@
     submitUrl = submitDomain + 'mturk/externalSubmit';
     assignmentId = urlParams.get('assignmentId') || '';
     workerId = urlParams.get('workerId') || '';
+    hitId = urlParams.get('hitId') || '';
   }
 
   /**
@@ -556,7 +558,9 @@
     $.post({
       "url": "api/start/",
       "data": {
-        workerID: workerId
+        workerID: workerId, 
+        hitID: hitId,
+        assignmentID: assignmentId
       }
     }).done(function (res) {
 
