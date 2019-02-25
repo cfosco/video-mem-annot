@@ -116,27 +116,34 @@ async function getVideos(workerID, seqTemplate) {
   const fillerVids = potentialFillers.slice(0, nFillers);
   const vidsToShow = targetVids.concat(fillerVids);
  
-  const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
-    + 'WHERE id_user = ? AND score IS NOT NULL'
-  , userID);
-  const level = levels[0].levelsCount + 1;
-
-  const videos = ordering.map(([index, type]) => {
-    return {
-        url: vidsToShow[index].uri,
-        type: type
-    }
-  });
-  taskInputs = {level, videos};
-  const hash = crypto.createHash('sha256');
-  hash.update(JSON.stringify(taskInputs));
-  const hashVal = hash.digest('hex');    
-
+  var taskInputs;
   await withinTX(async (connection) => {
+    // figure out the level num
+    const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
+      + 'WHERE id_user = ? AND score IS NOT NULL'
+    , userID);
+    const level = levels[0].levelsCount + 1;
+
     // create a level
     const result = await connection.query('INSERT INTO levels '
-        + '(id_user, inputs_hash) VALUES (?, ?)', [userID, hashVal]);
+        + '(id_user) VALUES (?)', userID);
     const levelID = result.insertId;
+
+    // compose and hash the client-side inputs to the level
+    const videos = ordering.map(([index, type]) => { 
+      return {
+        url: vidsToShow[index].uri,
+        type: type
+      }
+    });
+    taskInputs = { level, videos, levelID };
+    const hash = crypto.createHash('sha256');
+    hash.update(JSON.stringify(taskInputs));
+    const hashVal = hash.digest('hex');    
+
+    // insert the hash 
+    connection.query('UPDATE levels SET inputs_hash = ? WHERE id = ?', 
+        [hashVal, levelID]);
 
     const presentationInserts = ordering.map(([index, type], position) => {
       const vigilance = type == VID_TYPES.VIG || type == VID_TYPES.VIG_REPEAT;
@@ -173,8 +180,8 @@ async function getVideos(workerID, seqTemplate) {
  * @param {Promise<{overallScore: number, vigilanceScore: number, completedLevels: {score: number, reward: number}[]}>}
  * scores are between 0 and 1; reward is (TODO) a dollar value
  */
-async function saveResponses(workerID, responses, levelInputs, levelsPerLife=N_LEVELS_PER_NEW_LIFE, errorOnFastSubmit=config.errorOnFastSubmit) {
-  // get the most recent level (TODO: validate we should do this)
+async function saveResponses(workerID, levelID, responses, levelInputs, levelsPerLife=N_LEVELS_PER_NEW_LIFE, errorOnFastSubmit=config.errorOnFastSubmit) {
+
   const userID = await getUser(workerID);
   const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
   const user = result[0];
@@ -183,17 +190,17 @@ async function saveResponses(workerID, responses, levelInputs, levelsPerLife=N_L
   }
 
   const levels = await pool.query('SELECT * FROM levels'
-    + ' WHERE id_user = ? ORDER BY id DESC', userID);
+    + ' WHERE id = ? AND id_user = ?', [levelID, userID]);
   if (levels.length === 0) {
-    throw new InvalidResultsError('User has no level in progress');
+    throw new InvalidResultsError('Invalid level id');
   }
-  levelID = levels[0].id;
+  //levelID = levels[0].id;
 
   // check that answers have not already been given
   const pastResponses = await pool.query('SELECT response FROM presentations'
     + ' WHERE id_level = ? AND response IS NOT NULL LIMIT 1', levelID);
   if (pastResponses.length > 0) {
-    throw new InvalidResultsError('User has no level in progress');
+    throw new InvalidResultsError('This level has already been submitted');
   }
 
   const presentations = await pool.query('SELECT COUNT(*) AS presentationsCount '
@@ -248,6 +255,12 @@ async function saveResponses(workerID, responses, levelInputs, levelsPerLife=N_L
 
     await Promise.all(updates);
 
+    // calcualate level number
+    const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
+      + 'WHERE id_user = ? AND score IS NOT NULL'
+    , userID);
+    const levelNum = levels[0].levelsCount + 1;
+
     // calculate score
     const presentations = await connection.query('SELECT response, duplicate, vigilance'
       + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
@@ -263,18 +276,19 @@ async function saveResponses(workerID, responses, levelInputs, levelsPerLife=N_L
     await connection.query('UPDATE levels SET score = ? WHERE id = ?', [overallScore, levelID]);
     // TODO: add reward
 
-    // check num lives
+    // update num lives
     const livesQuery = await connection.query('SELECT num_lives FROM users WHERE id = ?', userID);
     const oldLives = livesQuery[0].num_lives;
+
     numLives = oldLives;
-    if (levels.length == 1) { 
+    if (levelNum == 1) { 
         if (passed) {
             numLives++;
         } else {
             numLives--;
         }
     } else {
-        if (levels.length % levelsPerLife == 0) {
+        if (levelNum % levelsPerLife == 0) {
             numLives++;
         }
         if (!passed) {

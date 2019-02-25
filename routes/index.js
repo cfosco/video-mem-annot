@@ -38,7 +38,12 @@ router.post('/start', (req, res) => {
 });
 
 router.post('/end', (req, res) => {
-  saveResponses(req.body.workerID, req.body.responses, req.body.inputs)
+  saveResponses(
+    req.body.workerID, 
+    req.body.levelID, 
+    req.body.responses, 
+    req.body.inputs
+  )
     .then(body => res.send(body))
     .catch((err) => {
         respondToError(err, res);

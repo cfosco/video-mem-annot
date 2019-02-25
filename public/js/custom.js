@@ -7,6 +7,7 @@
 
   // populated from server
   var inputData;
+  var levelID;
 
   // Debug settings
   var DEBUG = {
@@ -475,6 +476,7 @@
             else {
               var payload = {
                 workerID: workerId,
+                levelID: levelID,
                 responses: responses, 
                 inputs: taskData
               }
@@ -565,6 +567,7 @@
       // freeze the input data so we can send this back to the server to ensure
       // that the data was not corrupted
       inputData = Object.freeze(res);
+      levelID = res.levelID;
       $('.level-num').html(res.level);
       setupButtons();
     })
