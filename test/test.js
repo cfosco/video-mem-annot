@@ -608,3 +608,63 @@ describe('Test API invalid user', () => {
         });
     });
 });
+
+describe('Test concurrency', () => {
+    const playLevel = function(i) {
+        const username = "testConcur" + i;
+        return new Promise( (resolve, reject) => {
+          var agent = request(app);
+          // start the game
+          agent.post('/api/start')
+          .send({ workerID: username})
+          .expect(200)
+          .end((err, res) => {
+            if (err) return reject(err);
+            const inputs = res.body;
+            const { videos, level, levelID } = inputs;
+            assert(videos.length > 1);
+            expect(level).toBe(1);
+            // end the game
+            const answers = calcAnswers(videos, correct=true);
+            agent.post('/api/end')
+              .send({
+                workerID: username, 
+                levelID: levelID, 
+                responses: answers, 
+                inputs 
+              })
+              .expect(200)
+              .end((err, res) => {
+                  if (err) return reject(err);
+                  const {
+                    overallScore,
+                    vigilanceScore,
+                    passed,
+                    numLives,
+                    completedLevels
+                   } = res.body;
+                   expect(overallScore).toBe(1);
+                   expect(vigilanceScore).toBe(1);
+                   expect(passed).toBe(true);
+                   expect(numLives).toBe(2);
+                   expect(completedLevels.length).toBe(1);
+                   const { score, reward } = completedLevels[0];
+                   expect(score).toEqual(1);
+                   expect(reward).toEqual(config.rewardAmount);
+                   resolve(true);
+              });
+          });
+        });
+    }
+            
+    test('Concurrent requests should complete succesfully', async (done) => {
+        const username = "testConcur";
+        // make a bunch of promises
+        const promises = [];
+        for (let i = 0; i < 20; i++) {
+            promises.push(playLevel(i));
+        }
+        await Promise.all(promises);
+        done();
+    });
+});
