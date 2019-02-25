@@ -1,12 +1,17 @@
 const debug = require('debug')('memento:server');
 
+const dbConfigBase = {
+  connectionLimit: 100,
+  multipleStatements: true,
+};
+
 const dev = {
   dbConfig: {
-      connectionLimit : 100,
-      host            : process.env.MYSQL_HOST,
-      user            : process.env.MYSQL_USER,
-      password        : process.env.MYSQL_PASS,
-      database        : 'memento'
+    ...dbConfigBase,
+    host            : process.env.MYSQL_HOST,
+    user            : process.env.MYSQL_USER,
+    password        : process.env.MYSQL_PASS,
+    database        : 'memento',
   }, 
   enableBlockUsers    : false,
   errorOnFastSubmit   : false,
@@ -16,11 +21,11 @@ const dev = {
 
 const test = {
   dbConfig: {
-      connectionLimit : 100,
-      host            : process.env.MYSQL_HOST,
-      user            : process.env.MYSQL_USER,
-      password        : process.env.MYSQL_PASS,
-      database        : 'memento'  // TODO: separate test db!!!
+    ...dbConfigBase,
+    host            : process.env.MYSQL_HOST,
+    user            : process.env.MYSQL_USER,
+    password        : process.env.MYSQL_PASS,
+    database        : 'memento'  // TODO: separate test db!!!
   }, 
   enableBlockUsers    : true,
   errorOnFastSubmit   : false,

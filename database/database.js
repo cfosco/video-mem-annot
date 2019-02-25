@@ -70,7 +70,11 @@ async function withinTX(callback) {
     await connection.commit();
   } catch (e) {
     await connection.rollback();
-    throw e;
+    if (e.code === 'ER_LOCK_DEADLOCK') {
+      await withinTX(callback);
+    } else {
+      throw e;
+    }
   }
   await connection.release();
 }
