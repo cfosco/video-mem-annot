@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS videos (
 CREATE TABLE IF NOT EXISTS levels (
   id INT PRIMARY KEY AUTO_INCREMENT,
   id_user INT NOT NULL,
+  inputs_hash VARCHAR(64) NOT NULL,
   FOREIGN KEY(id_user) REFERENCES users(id),
   score DECIMAL(10,9),
   reward DECIMAL(4,2),

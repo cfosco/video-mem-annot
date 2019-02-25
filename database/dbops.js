@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { pool, withinTX } = require('./database');
 const debug = require('debug')('memento:server');
 const assert = require('assert');
@@ -59,13 +60,16 @@ async function getUser(workerID) {
   }
 
   let userID;
-  const users = await pool.query('SELECT id FROM users WHERE worker_id = ?', workerID);
-  if (users.length === 0) {
-    const result = await pool.query('INSERT INTO users (worker_id) VALUES (?)', workerID);
-    userID = result.insertId;
-  } else {
-    userID = users[0].id;
-  }
+  
+  await withinTX(async (connection) => {
+      const users = await connection.query('SELECT id FROM users WHERE worker_id = ?', workerID);
+      if (users.length === 0) {
+        const result = await connection.query('INSERT INTO users (worker_id) VALUES (?)', workerID);
+        userID = result.insertId;
+      } else {
+        userID = users[0].id;
+      }
+  });
   return userID;
 }
 
@@ -117,9 +121,21 @@ async function getVideos(workerID, seqTemplate) {
   , userID);
   const level = levels[0].levelsCount + 1;
 
-  // create a level
+  const videos = ordering.map(([index, type]) => {
+    return {
+        url: vidsToShow[index].uri,
+        type: type
+    }
+  });
+  taskInputs = {level, videos};
+  const hash = crypto.createHash('sha256');
+  hash.update(JSON.stringify(taskInputs));
+  const hashVal = hash.digest('hex');    
+
   await withinTX(async (connection) => {
-    const result = await connection.query('INSERT INTO levels (id_user) VALUES (?)', userID);
+    // create a level
+    const result = await connection.query('INSERT INTO levels '
+        + '(id_user, inputs_hash) VALUES (?, ?)', [userID, hashVal]);
     const levelID = result.insertId;
 
     const presentationInserts = ordering.map(([index, type], position) => {
@@ -148,13 +164,7 @@ async function getVideos(workerID, seqTemplate) {
     await Promise.all(promises);
   });
   
-  const videos = ordering.map(([index, type]) => {
-    return {
-        "url": vidsToShow[index].uri,
-        "type": type
-    }
-  });
-  return {level, videos};
+ return taskInputs;
 }
 
 /**
@@ -163,7 +173,7 @@ async function getVideos(workerID, seqTemplate) {
  * @param {Promise<{overallScore: number, vigilanceScore: number, completedLevels: {score: number, reward: number}[]}>}
  * scores are between 0 and 1; reward is (TODO) a dollar value
  */
-async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW_LIFE, errorOnFastSubmit=config.errorOnFastSubmit) {
+async function saveResponses(workerID, responses, levelInputs, levelsPerLife=N_LEVELS_PER_NEW_LIFE, errorOnFastSubmit=config.errorOnFastSubmit) {
   // get the most recent level (TODO: validate we should do this)
   const userID = await getUser(workerID);
   const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
@@ -203,15 +213,24 @@ async function saveResponses(workerID, responses, levelsPerLife=N_LEVELS_PER_NEW
   }
 
   // check that answers have the correct format (roughly)
+  // calculate the hash of the inputs
   try {
-      assert(responses.length == levelLen);
+      if (config.enforceSameInputs) {
+        const hash = crypto.createHash('sha256');
+        hash.update(JSON.stringify(levelInputs));
+        const hashVal = hash.digest('hex');    
+        const savedHashVal = levels[0].inputs_hash;
+        assert(savedHashVal === hashVal, "Inputs hash does not match");
+      }
+      assert(responses.length == levelLen, "responses.length does not match the length of the level ");
       responses.forEach((elt) => {
         const { response, time } = elt;
-        assert(typeof(response) == "boolean");
-        assert(typeof(time) == "number");
+        assert(typeof(response) == "boolean", "responses should be a boolean");
+        assert(typeof(time) == "number", "time should be a number");
       });
   } catch(error) {
-    throw new InvalidResultsError('Invalid format for responses.');
+    debug("Error while checking validity of inputs:", error);
+    throw new InvalidResultsError('Invalid responses.');
   }
 
   var numLives;

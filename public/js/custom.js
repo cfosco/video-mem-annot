@@ -6,7 +6,14 @@
   var submitUrl;
 
   // populated from server
-  var data;
+  var inputData;
+
+  // Debug settings
+  var DEBUG = {
+    speedup: false,
+    fakeSubmit: false
+  }
+
   /**
    * Gets the values from the URL query string that we need
    */
@@ -39,7 +46,7 @@
   function startTask() {
     $('#experiment').show();
     $('#instructions').css('display', 'none');
-    showTask(data); // from custom.js
+    showTask(inputData); // from custom.js
   }
 
   /**
@@ -80,10 +87,6 @@
       FILLER: "filler",
     }
     var CLIP_DURATION = 3; // in seconds
-    var DEBUG = {
-      speedup: false,
-      fakeSubmit: false
-    }
     var LOAD_VIDEOMEM = false
 
     if (LOAD_VIDEOMEM) {
@@ -448,14 +451,10 @@
           // play next video
           videoElements.shift();
 
-          if (DEBUG.speedup) {
-            videoElements = [] // DEBUG
-          }
-
           if (videoElements.length > 0) {
             videoElements[0].play();
           } else {
-            if (DEBUG.fakeSubmit) { // DEBUG
+            if (DEBUG.fakeSubmit) {
               var data = {};
 
               data.overallScore = 0.81
@@ -474,12 +473,14 @@
               showResultsPage(data)
             }
             else {
+              var payload = {
+                workerID: workerId,
+                responses: responses, 
+                inputs: taskData
+              }
               $.post({
-                "url": "api/end/",
-                "data": JSON.stringify({
-                  workerID: taskData.workerId,
-                  responses: responses
-                }),
+                url: "api/end/",
+                data: JSON.stringify(payload),
                 contentType: 'application/json; charset=utf-8',
                 dataType: 'json'
               }).done(showResultsPage)
@@ -525,7 +526,8 @@
     $progressBar.progress({ total: transcripts.length });
 
     // preload videos and start game
-    for (counter; counter < 1 + NUM_LOAD_AHEAD; counter += 1) {
+    const numVidsToLoad = Math.min(1 + NUM_LOAD_AHEAD, taskData.videos.length);
+    for (counter; counter < numVidsToLoad; counter += 1) {
       newVideo(transcripts[counter], types[counter]);
     }
     if (!SHOW_PLAY_PAUSE) {
@@ -555,8 +557,14 @@
         workerID: workerId
       }
     }).done(function (res) {
-      data = res;
-      data.workerId = workerId;
+
+      if (DEBUG.speedup) {
+        res.videos = res.videos.slice(0, 1);
+      }
+
+      // freeze the input data so we can send this back to the server to ensure
+      // that the data was not corrupted
+      inputData = Object.freeze(res);
       $('.level-num').html(res.level);
       setupButtons();
     })
