@@ -6,7 +6,7 @@ const config = require('../config');
 
 const pool = mysql.createPool(config.dbConfig);
 
-async function initDB() {
+async function initDB(populateVideos=true) {
   // read files for database schema and list of video urls
   let createTableSQL;
   let videoURLs;
@@ -46,7 +46,7 @@ async function initDB() {
   }
 
   // populate the videos table if it is empty
-  if (videoURLs) {
+  if (populateVideos && videoURLs) {
     try {
       const videos = await pool.query('SELECT * FROM videos LIMIT 1');
       if (videos.length === 0) {
