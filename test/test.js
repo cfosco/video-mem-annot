@@ -1,6 +1,7 @@
 const request = require('supertest');
 const app = require('../app');
 const debug = require('debug')('memento:server');
+const config = require('../config');
 const { pool, initDB } = require('../database/database');
 const { getSeqTemplate } = require('../utils/sequence');
 const {
@@ -206,6 +207,7 @@ describe('Test errorOnFastSubmit', () => {
                 inputs.levelID,
                 answers, 
                 inputs, 
+                reward=1,
                 levelsPerLife=50,
                 errorOnFastSubmit=true
             );
@@ -234,6 +236,7 @@ describe('Test errorOnFastSubmit', () => {
                     levelID,
                     correctResponses,
                     inputs, 
+                    reward=1,
                     levelsPerLife=50,
                     errorOnFastSubmit=true
                 ));
@@ -254,13 +257,14 @@ describe('Test save answers', () => {
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, inputs.levelID, answers, inputs);
+    } = await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
     expect(overallScore).toEqual(1);
     expect(numLives).toEqual(2);
     expect(vigilanceScore).toEqual(1);
     expect(passed).toBe(true);
     expect(completedLevels).toHaveLength(1);
     expect(completedLevels[0].score).toEqual(1);
+    expect(completedLevels[0].reward).toEqual(.5);
     done();
   });
 });
@@ -281,6 +285,7 @@ describe('Test lives increment when correct', () => {
             inputs.levelID, 
             answers, 
             inputs, 
+            reward=1,
             levelsPerLife=3
         );
         expect(completedLevels.length).toEqual(i);
@@ -293,6 +298,60 @@ describe('Test lives increment when correct', () => {
     done();
   });
 });
+
+describe('Test rewards', () => {
+  test('Rewards are stored per-level and should be consistent', async (done) => {
+    const username = 'testRewards';
+    var responses;
+    for (let i = 0; i < 5; i++) {
+        const { answers, inputs } = await getVidsAndMakeAnswers(username);
+        responses = await saveResponses(
+            username, 
+            inputs.levelID, 
+            answers, 
+            inputs, 
+            reward=i
+        );
+        const levels = responses.completedLevels;
+        expect(levels[levels.length-1].reward).toEqual(i);
+    }
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      passed,
+      completedLevels
+    } = responses;
+    responses.completedLevels.forEach(({ score, reward }, i) => {
+        expect(reward).toEqual(i);
+    });
+    done();
+  });
+
+  test('Rewards should be assigned even when someone fails a level', async(done) => {
+    const username = 'testRewardsFailed';
+    const { answers, inputs } = await getVidsAndMakeAnswers(username, correct=false);
+    const {
+      overallScore,
+      vigilanceScore,
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses(
+        username, 
+        inputs.levelID, 
+        answers, 
+        inputs, 
+        reward=1,
+    );
+    expect(passed).toBe(false);
+    expect(numLives).toBe(0);
+    expect(completedLevels[completedLevels.length-1].reward).toEqual(1);
+    done();
+  });
+});
+
+
 
 describe('Test level concurrency', () => {
     test('Level results should be properly matched when multiple levels are open', async (done) => {
@@ -319,6 +378,7 @@ describe('Test level concurrency', () => {
                 inputs.levelID, 
                 answers, 
                 inputs, 
+                reward=1,
                 levelsPerLife
             );
             expect(overallScore).toBe(1);
@@ -489,6 +549,9 @@ describe('Test game end', () => {
         expect(passed).toBe(true);
         expect(numLives).toBe(2);
         expect(completedLevels.length).toBe(1);
+        const { score, reward } = completedLevels[0];
+        expect(score).toEqual(1);
+        expect(reward).toEqual(config.rewardAmount);
         done();
       })
   });

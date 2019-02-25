@@ -197,7 +197,14 @@ async function getVideos(data, seqTemplate) {
  * @param {Promise<{overallScore: number, vigilanceScore: number, completedLevels: {score: number, reward: number}[]}>}
  * scores are between 0 and 1; reward is (TODO) a dollar value
  */
-async function saveResponses(workerID, levelID, responses, levelInputs, levelsPerLife=N_LEVELS_PER_NEW_LIFE, errorOnFastSubmit=config.errorOnFastSubmit) {
+async function saveResponses(
+    workerID, 
+    levelID, 
+    responses, 
+    levelInputs, 
+    reward=config.rewardAmount, 
+    levelsPerLife=N_LEVELS_PER_NEW_LIFE, 
+    errorOnFastSubmit=config.errorOnFastSubmit) {
 
   const userID = await getUser(workerID);
   const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
@@ -290,8 +297,7 @@ async function saveResponses(workerID, levelID, responses, levelInputs, levelsPe
     overallScore = numRight / numAll;
     vigilanceScore = numVigRight / numVig;
     passed = didPassLevel(overallScore, vigilanceScore);
-    await connection.query('UPDATE levels SET score = ? WHERE id = ?', [overallScore, levelID]);
-    // TODO: add reward
+    await connection.query('UPDATE levels SET score = ?, reward = ? WHERE id = ?', [overallScore, reward, levelID]);
 
     // update num lives
     const livesQuery = await connection.query('SELECT num_lives FROM users WHERE id = ?', userID);
