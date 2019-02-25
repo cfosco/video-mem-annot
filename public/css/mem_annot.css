@@ -203,3 +203,7 @@ we do this by having a smaller container with hidden overflow */
   margin-top: 16px;
 }
 
+.center-text {
+  text-align: center;
+}
+

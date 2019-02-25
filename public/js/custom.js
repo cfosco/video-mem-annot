@@ -554,6 +554,13 @@
 
   $(document).ready(function () {
     getURLParams();
+
+    if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE" || !workerId) { 
+      // have not accepted the hit, we should NOT load a level for them
+      $('#start-button').hide();
+      $("#accept-hit-message").show();
+      return;
+    }
     // get videos and start game
     $.post({
       "url": "api/start/",
