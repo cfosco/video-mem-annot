@@ -24,7 +24,7 @@
 
   // Debug settings
   var DEBUG = {
-    only_one_video: false,
+    onlyOneVideo: true,
     fakeSubmit: false
   }
 
@@ -608,7 +608,7 @@
       }
     }).done(function (res) {
 
-      if (DEBUG.only_one_video) {
+      if (DEBUG.onlyOneVideo) {
         res.videos = res.videos.slice(0, 1);
       }
 
