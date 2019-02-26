@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS levels (
   inputs_hash VARCHAR(64),
   FOREIGN KEY(id_user) REFERENCES users(id),
   score DECIMAL(10,9),
+  vig_score DECIMAL(10, 9),
+  false_pos_rate DECIMAL(10, 9),
   reward DECIMAL(4,2),
   insert_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

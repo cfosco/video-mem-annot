@@ -212,10 +212,15 @@ function calcScores(presentations) {
   const numVigRight = vigilancePresentations.filter(right).length;
   const numNonDuplicate = presentations.filter(nonDuplicate).length;
 
-  falsePositiveRate = presentations.filter(falsePositive).length / numNonDuplicate;
-  overallScore = numRight / numAll;
-  vigilanceScore = numVigRight / numVig;
-
+  falsePositiveRate = numNonDuplicate == 0 
+                    ? 0 
+                    : presentations.filter(falsePositive).length / numNonDuplicate;
+  overallScore = numAll == 0 
+               ? 1
+               : numRight / numAll;
+  vigilanceScore = numVig == 0
+                 ? 1 
+                 : numVigRight / numVig;
 
   passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);
 
@@ -278,8 +283,8 @@ async function saveResponses(
         const hashVal = hash.digest('hex');
         const savedHashVal = levels[0].inputs_hash;
         assert(savedHashVal === hashVal, "Inputs hash does not match");
+        assert(responses.length == levelLen, "responses.length does not match the length of the level ");
       }
-      assert(responses.length == levelLen, "responses.length does not match the length of the level ");
       responses.forEach((elt) => {
         const { response, time } = elt;
         assert(typeof(response) == "boolean", "responses should be a boolean");
@@ -318,10 +323,7 @@ async function saveResponses(
 
     const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
 
-
-    debug('passed,overallScore, vigilanceScore, falsePositiveRate in saveResponses',passed,overallScore,vigilanceScore,falsePositiveRate);
-
-    await connection.query('UPDATE levels SET score = ?, reward = ? WHERE id = ?', [overallScore, reward, levelID]);
+    await connection.query('UPDATE levels SET score = ?, vig_score = ?, false_pos_rate = ?, reward = ? WHERE id = ?', [overallScore, vigilanceScore, falsePositiveRate, reward, levelID]);
 
     // update num lives
     const livesQuery = await connection.query('SELECT num_lives FROM users WHERE id = ?', userID);
