@@ -67,7 +67,7 @@ function createMockPresentations(n_pres, fail_vig, fail_targets, fail_others) {
           response = fail_others
       }
 
-      presentations.push([{vigilance, targeted, duplicate, response}])
+      presentations.push({vigilance, targeted, duplicate, response})
     }
 
     return presentations
@@ -319,7 +319,8 @@ describe('Test accuracy and passing functions', () => {
 
         presentations = createMockPresentations(40, true, false, false);
         const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
-        debug(presentations, passed, overallSc)
+        debug('passed, overallScore, vigilanceScore, falsePositiveRate',passed, overallScore, vigilanceScore, falsePositiveRate)
+        debug('falsePositiveRate', falsePositiveRate)
         expect(vigilanceScore).toEqual(0);
         expect(passed).toEqual(false);
         done();
@@ -338,6 +339,7 @@ describe('Test accuracy and passing functions', () => {
 
         presentations = createMockPresentations(40, false, true, false)
         const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
+        debug('IN ACC TEST:',passed, overallScore, vigilanceScore, falsePositiveRate)
         expect(passed).toEqual(true);
         done();
     });

@@ -15,7 +15,7 @@ const VID_TYPES = {
 const N_LEVELS_PER_NEW_LIFE = 50;
 
 const didPassLevel = function(overallScore, vigilanceScore, falsePositiveRate) {
-   return overallScore > .75 && vigilanceScore > .9 && falsePositiveRate > 0.4;
+   return overallScore > .75 && vigilanceScore > .9 && falsePositiveRate < 0.8;
 }
 
 // Errors to be used in the API
@@ -203,16 +203,19 @@ function calcScores(presentations) {
 
   // calculate score
   const right = (p) => p.response === p.duplicate;
-  const falsePositive = (p) => (p.response==true && !p.duplicate);
+  const falsePositive = (p) => (p.response && !p.duplicate);
+  const nonDuplicate = (p) => (!p.duplicate);
   const numAll = presentations.length;
   const numRight = presentations.filter(right).length;
-  const vigilancePresentations = presentations.filter(p => p.vigilance);
+  const vigilancePresentations = presentations.filter(p => (p.vigilance && p.duplicate));
   const numVig = vigilancePresentations.length;
   const numVigRight = vigilancePresentations.filter(right).length;
+  const numNonDuplicate = presentations.filter(nonDuplicate).length;
 
-  falsePositiveRate = presentations.filter(falsePositive) / numAll;
+  falsePositiveRate = presentations.filter(falsePositive).length / numNonDuplicate;
   overallScore = numRight / numAll;
   vigilanceScore = numVigRight / numVig;
+
 
   passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);
 
@@ -287,10 +290,11 @@ async function saveResponses(
     throw new InvalidResultsError('Invalid responses.');
   }
 
-  var numLives;
-  var overallScore;
-  var vigilanceScore;
-  var passed;
+  // var numLives;
+  // var overallScore;
+  // var vigilanceScore;
+  // var passed;
+
   await withinTX(async (connection) => {
     // update db with answers
     const values = [];
@@ -310,18 +314,13 @@ async function saveResponses(
     // // calculate score
     const presentations = await connection.query('SELECT response, duplicate, vigilance'
       + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
-    // const right = (p) => p.response === p.duplicate;
-    // const falsePositive = (p) => (p.response==true && !p.duplicate);
-    // const numAll = presentations.length;
-    // const numRight = presentations.filter(right).length;
-    // const vigilancePresentations = presentations.filter(p => p.vigilance);
-    // const numVig = vigilancePresentations.length;
-    // const numVigRight = vigilancePresentations.filter(right).length;
-    // falsePositiveRate = presentations.filter(falsePositive) / numAll;
-    // overallScore = numRight / numAll;
-    // vigilanceScore = numVigRight / numVig;
+
 
     const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
+
+
+    debug('passed,overallScore, vigilanceScore, falsePositiveRate in saveResponses',passed,overallScore,vigilanceScore,falsePositiveRate);
+
     await connection.query('UPDATE levels SET score = ?, reward = ? WHERE id = ?', [overallScore, reward, levelID]);
 
     // update num lives
