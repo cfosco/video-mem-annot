@@ -314,7 +314,7 @@ describe('Test save answers', () => {
   });
 });
 
-describe('Test accuracy and passing functions', () => {
+describe('Test scoring functions', () => {
     test('Check that user doesnt pass when all vigilances failed (vigilance accuracy too low)', async (done) => {
 
         presentations = createMockPresentations(40, true, false, false);
@@ -346,6 +346,108 @@ describe('Test accuracy and passing functions', () => {
 
 });
 
+describe('Test that accuracy metrics are saved in the db', () => {
+    test('Check vig and false positives on complete success', async(done) => {
+        const username = "testFalsePosSuccess";
+        const { answers, inputs } = await getVidsAndMakeAnswers(username);
+        const {
+          overallScore,
+          vigilanceScore,
+          numLives,
+          passed,
+          completedLevels
+        } = await saveResponses(
+            username,
+            inputs.levelID,
+            answers,
+            inputs
+        );
+        expect(overallScore).toBe(1);
+        expect(vigilanceScore).toBe(1);
+        expect(passed).toBe(true);
+    
+        // check the db 
+        const res = await pool.query("SELECT * FROM levels WHERE id = ?", inputs.levelID);
+        expect(res[0].vig_score).toBe(1);
+        expect(res[0].false_pos_rate).toBe(0);
+        done();
+ 
+    });
+
+    test('Check vig and false positives on complete failure', async(done) => {
+        const username = "testFalsePosFailure";
+        const { answers, inputs } = await getVidsAndMakeAnswers(username, correct=false);
+        const {
+          overallScore,
+          vigilanceScore,
+          numLives,
+          passed,
+          completedLevels
+        } = await saveResponses(
+            username,
+            inputs.levelID,
+            answers,
+            inputs
+        );
+        expect(overallScore).toBe(0);
+        expect(vigilanceScore).toBe(0);
+        expect(passed).toBe(false);
+    
+        // check the db 
+        const res = await pool.query("SELECT * FROM levels WHERE id = ?", inputs.levelID);
+        expect(res[0].vig_score).toBe(0);
+        expect(res[0].false_pos_rate).toBe(1);
+        done();
+ 
+    });
+
+    test('Check vig and false positives with mixed results', async(done) => {
+        const username = "testFalsePosMixedResults";
+        const shortTemplate = [1, 3, [
+            [0, "filler"], 
+            [1, "target"], 
+            [1, "target_repeat"],
+            [2, "vig"], 
+            [2, "vig_repeat"], 
+            [3, "vig"], 
+            [3, "vig_repeat"]
+        ]];
+        const inputs = await getVideos({workerID: username}, shortTemplate);
+        //const {videos, level} = inputs;
+        const time = 2;
+        const answers = [
+            { response: true, time }, 
+            { response: false, time }, 
+            { response: true, time }, 
+            { response: false, time }, 
+            { response: true, time }, 
+            { response: false, time }, 
+            { response: false, time }, 
+        ];
+        const {
+          overallScore,
+          vigilanceScore,
+          numLives,
+          passed,
+          completedLevels
+        } = await saveResponses(
+            username,
+            inputs.levelID,
+            answers,
+            inputs
+        );
+        //expect(overallScore).toBe();
+        expect(vigilanceScore).toBe(.5);
+    
+        // check the db 
+        const res = await pool.query("SELECT * FROM levels WHERE id = ?", inputs.levelID);
+        expect(res[0].vig_score).toBe(.5);
+        // 1 false positive out of 4 true negatives
+        expect(res[0].false_pos_rate).toBe(.25);
+        done();
+    });
+
+});
 
 describe('Test lives increment when correct', () => {
   test('Lives should increment at levelsPerLife', async (done) => {
