@@ -7,6 +7,7 @@ const { getSeqTemplate } = require('../utils/sequence');
 const {
     getVideos,
     saveResponses,
+    calcScores,
     BlockedError,
     UnauthenticatedError,
     OutOfVidsError,
@@ -30,6 +31,48 @@ function calcAnswers(videos, correct) {
     time: Math.random() * 3
   }));
 }
+
+function createMockPresentations(n_pres, fail_vig, fail_targets, fail_others) {
+
+    var n_vigs = n_pres*0.2
+    var n_targets = n_pres*0.2
+
+    var presentations = []
+
+    for (const i of Array(n_pres).keys()) {
+      if (i < n_vigs) {
+          vigilance = true
+          targeted = false
+          duplicate = false
+          response = fail_others
+      } else if (i < n_vigs*2) {
+          vigilance = true
+          targeted = false
+          duplicate = true
+          response = !fail_vig
+      } else if (i < n_vigs*2+n_targets) {
+          vigilance = false
+          targeted = true
+          duplicate = false
+          response = fail_others
+      } else if (i < n_vigs*2+n_targets*2) {
+          vigilance = false
+          targeted = true
+          duplicate = true
+          response = !fail_targets
+      } else {
+          vigilance = false
+          targeted = false
+          duplicate = false
+          response = fail_others
+      }
+
+      presentations.push([{vigilance, targeted, duplicate, response}])
+    }
+
+    return presentations
+}
+
 
 async function getVidsAndMakeAnswers(user, correct=true) {
     const template = getSeqTemplate();
@@ -271,19 +314,36 @@ describe('Test save answers', () => {
   });
 });
 
-describe('Test that accuracy function is working', () => {
-    test('Check that user with bad vigilance fails', async (done) => {
+describe('Test accuracy and passing functions', () => {
+    test('Check that user doesnt pass when all vigilances failed (vigilance accuracy too low)', async (done) => {
+
+        presentations = createMockPresentations(40, true, false, false);
+        const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
+        debug(presentations, passed, overallSc)
+        expect(vigilanceScore).toEqual(0);
+        expect(passed).toEqual(false);
         done();
     });
 
-    test('Check that user with bad false positive fails', async (done) => {
+    test('Check that user doesnt pass when all non-duplicates failed (FPR too high)', async (done) => {
+
+        presentations = createMockPresentations(40, false, false, true)
+        const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
+        expect(falsePositiveRate).toEqual(1);
+        expect(passed).toEqual(false);
         done();
     });
 
-    test('Check that users can pass even with pad performance on targets', async (done) => {
+    test('Check that users can pass even with bad performance on targets', async (done) => {
+
+        presentations = createMockPresentations(40, false, true, false)
+        const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
+        expect(passed).toEqual(true);
         done();
     });
+
 });
+
 
 describe('Test lives increment when correct', () => {
   test('Lives should increment at levelsPerLife', async (done) => {
@@ -644,10 +704,10 @@ describe('Test concurrency', () => {
             const answers = calcAnswers(videos, correct=true);
             agent.post('/api/end')
               .send({
-                workerID: username, 
-                levelID: levelID, 
-                responses: answers, 
-                inputs 
+                workerID: username,
+                levelID: levelID,
+                responses: answers,
+                inputs
               })
               .expect(200)
               .end((err, res) => {
@@ -672,7 +732,7 @@ describe('Test concurrency', () => {
           });
         });
     }
-            
+
     test('Concurrent requests should complete succesfully', async (done) => {
         const username = "testConcur";
         // make a bunch of promises
@@ -738,13 +798,13 @@ describe('Test video prioritization', () => {
       }
       const template = [0, nVids, order];
       const { videos } = await getVideos({workerID: username}, template);
-      // check that there is a mix of vid types 
+      // check that there is a mix of vid types
       var nActualHigh = 0;
       var nActualLow = 0;
       videos.map(({ url }) => {
           const vidid = parseInt(url);
           return parseInt(url) < nHighPri ? nActualHigh++ : nActualLow++;
-      });        
+      });
       assert (nActualHigh > 0, "Warning; fillers were all low-pri");
       assert (nActualLow > 0, "Warning: fillers were all high-pri");
       done();

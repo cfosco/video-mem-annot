@@ -198,6 +198,28 @@ async function getVideos(data, seqTemplate) {
  * @param {Promise<{overallScore: number, vigilanceScore: number, completedLevels: {score: number, reward: number}[]}>}
  * scores are between 0 and 1; reward is (TODO) a dollar value
  */
+
+function calcScores(presentations) {
+
+  // calculate score
+  const right = (p) => p.response === p.duplicate;
+  const falsePositive = (p) => (p.response==true && !p.duplicate);
+  const numAll = presentations.length;
+  const numRight = presentations.filter(right).length;
+  const vigilancePresentations = presentations.filter(p => p.vigilance);
+  const numVig = vigilancePresentations.length;
+  const numVigRight = vigilancePresentations.filter(right).length;
+
+  falsePositiveRate = presentations.filter(falsePositive) / numAll;
+  overallScore = numRight / numAll;
+  vigilanceScore = numVigRight / numVig;
+
+  passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);
+
+  return {passed, overallScore, vigilanceScore, falsePositiveRate}
+
+}
+
 async function saveResponses(
     workerID,
     levelID,
@@ -285,20 +307,21 @@ async function saveResponses(
     , userID);
     const levelNum = levels[0].levelsCount + 1;
 
-    // calculate score
+    // // calculate score
     const presentations = await connection.query('SELECT response, duplicate, vigilance'
       + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
-    const right = (p) => p.response === p.duplicate;
-    const falsePositive = (p) => (p.response==true && !p.duplicate);
-    const numAll = presentations.length;
-    const numRight = presentations.filter(right).length;
-    const vigilancePresentations = presentations.filter(p => p.vigilance);
-    const numVig = vigilancePresentations.length;
-    const numVigRight = vigilancePresentations.filter(right).length;
-    falsePositiveRate = presentations.filter(falsePositive) / numAll;
-    overallScore = numRight / numAll;
-    vigilanceScore = numVigRight / numVig;
-    passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);
+    // const right = (p) => p.response === p.duplicate;
+    // const falsePositive = (p) => (p.response==true && !p.duplicate);
+    // const numAll = presentations.length;
+    // const numRight = presentations.filter(right).length;
+    // const vigilancePresentations = presentations.filter(p => p.vigilance);
+    // const numVig = vigilancePresentations.length;
+    // const numVigRight = vigilancePresentations.filter(right).length;
+    // falsePositiveRate = presentations.filter(falsePositive) / numAll;
+    // overallScore = numRight / numAll;
+    // vigilanceScore = numVigRight / numVig;
+
+    const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
     await connection.query('UPDATE levels SET score = ?, reward = ? WHERE id = ?', [overallScore, reward, levelID]);
 
     // update num lives
@@ -340,6 +363,7 @@ async function saveResponses(
 module.exports = {
   getVideos,
   saveResponses,
+  calcScores,
   BlockedError,
   UnauthenticatedError,
   OutOfVidsError,
