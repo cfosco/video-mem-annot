@@ -207,3 +207,12 @@ we do this by having a smaller container with hidden overflow */
   text-align: center;
 }
 
+#gif-instructions {
+  display: inline-block;
+  text-align: center;
+
+}
+
+.instructions-img {
+  height:230px;
+}

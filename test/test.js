@@ -75,7 +75,7 @@ describe('Test get sequence template', () => {
 describe('Test get videos', () => {
   test('It should return data in the correct format', async (done) => {
     const user = 'test1';
-    const template = getSeqTemplate(); 
+    const template = getSeqTemplate();
     const [nTargets, nFillers, ordering] = template;
     const {videos, level} = await getVideos({workerID: user}, template);
 
@@ -113,7 +113,7 @@ describe('Test get videos', () => {
     const assignmentID = "aid";
     const hitID = "hid";
     const inputData = {
-        workerID: user, 
+        workerID: user,
         assignmentID,
         hitID
     }
@@ -203,10 +203,10 @@ describe('Test errorOnFastSubmit', () => {
             const user = "errFastSubmit";
             const { answers, inputs } = await getVidsAndMakeAnswers(user);
             await saveResponses(
-                user, 
+                user,
                 inputs.levelID,
-                answers, 
-                inputs, 
+                answers,
+                inputs,
                 reward=1,
                 levelsPerLife=50,
                 errorOnFastSubmit=true
@@ -232,16 +232,16 @@ describe('Test errorOnFastSubmit', () => {
         } = await new Promise(resolve => {
             setTimeout(() => {
                 resolve(saveResponses(
-                    user,   
+                    user,
                     levelID,
                     correctResponses,
-                    inputs, 
+                    inputs,
                     reward=1,
                     levelsPerLife=50,
                     errorOnFastSubmit=true
                 ));
             }, msecToWait);
-        }); 
+        });
         expect(overallScore).toBe(1);
         done();
     }, 3000);
@@ -281,10 +281,10 @@ describe('Test lives increment when correct', () => {
           passed,
           completedLevels
         } = await saveResponses(
-            username, 
-            inputs.levelID, 
-            answers, 
-            inputs, 
+            username,
+            inputs.levelID,
+            answers,
+            inputs,
             reward=1,
             levelsPerLife=3
         );
@@ -306,10 +306,10 @@ describe('Test rewards', () => {
     for (let i = 0; i < 5; i++) {
         const { answers, inputs } = await getVidsAndMakeAnswers(username);
         responses = await saveResponses(
-            username, 
-            inputs.levelID, 
-            answers, 
-            inputs, 
+            username,
+            inputs.levelID,
+            answers,
+            inputs,
             reward=i
         );
         const levels = responses.completedLevels;
@@ -338,10 +338,10 @@ describe('Test rewards', () => {
       passed,
       completedLevels
     } = await saveResponses(
-        username, 
-        inputs.levelID, 
-        answers, 
-        inputs, 
+        username,
+        inputs.levelID,
+        answers,
+        inputs,
         reward=1,
     );
     expect(passed).toBe(false);
@@ -374,10 +374,10 @@ describe('Test level concurrency', () => {
               passed,
               completedLevels
             } = await saveResponses(
-                username, 
-                inputs.levelID, 
-                answers, 
-                inputs, 
+                username,
+                inputs.levelID,
+                answers,
+                inputs,
                 reward=1,
                 levelsPerLife
             );
@@ -418,7 +418,7 @@ describe('Test failure on first round', () => {
   test('Failure on first round should produce 0 lives', async (done) => {
     const username = 'testFailFirst';
     const { answers, inputs } = await getVidsAndMakeAnswers(
-        username, 
+        username,
         correct=false
     );
     const {
@@ -458,8 +458,8 @@ describe('Test failure on later rounds', () => {
     var finalLives;
     for (let i = 0; i < 2; i++) {
       let { answers: wrongAnswers, inputs: wrongInputs } = await getVidsAndMakeAnswers(
-        username, 
-        correct=false  
+        username,
+        correct=false
       );
       const {
         overallScore,
@@ -505,7 +505,7 @@ describe('Test game start blocked user', () => {
     const username = 'startBlocked';
     // block the user
     const { answers, inputs }  = await getVidsAndMakeAnswers(
-        username, 
+        username,
         correct=false
     );
     const {
@@ -562,7 +562,7 @@ describe('Test game end blocked user', () => {
     const username = 'endBlocked';
     // block the user
     const { answers: wrongAnswers, inputs: wrongInputs } = await getVidsAndMakeAnswers(
-        username, 
+        username,
         correct=false
     );
     const {

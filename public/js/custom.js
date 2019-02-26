@@ -80,6 +80,7 @@
   }
 
   function showTask(taskData) {
+    
     // constants
     var BASE_PATH_VIDEOS = "http://data.csail.mit.edu/soundnet/actions3/";
     var VID_TYPES = {
@@ -95,6 +96,7 @@
     if (LOAD_VIDEOMEM) {
       BASE_PATH_VIDEOS = ""
     }
+
     // inputs
     var level = taskData.level;
     var transcripts = [];
@@ -339,8 +341,8 @@
 
     }
 
-    /** 
-     * Submits task data to our database 
+    /**
+     * Submits task data to our database
      */
     function submitData() {
       if (DEBUG.fakeSubmit) {
@@ -364,7 +366,7 @@
         var payload = {
           workerID: workerId,
           levelID: levelID,
-          responses: responses, 
+          responses: responses,
           inputs: taskData
         }
         $.post({
@@ -392,7 +394,7 @@
       var livesMessage;
       var iconElts = "";
       if (data.numLives <= 0) {
-        // put a sad face emoji 
+        // put a sad face emoji
         livesMessage = "You have no lives left. You can no longer play the game."
         iconElts += '<i class="frown outline icon"></i>';
 
@@ -558,7 +560,7 @@
     }
   }
 
-  /** 
+  /**
    * Displays an error message received by an API endpoint to the user.
    */
   function showError(error, headerText) {
@@ -566,7 +568,7 @@
     $("#error-message").find(".header").text(headerText);
     $("#error-message").find("p").text(error.responseText);
     $("#main-interface").hide();
-    $("#instructions").hide();  
+    $("#instructions").hide();
     $("#experiment").show();
     $("#error-message").show();
   }
@@ -574,7 +576,7 @@
   $(document).ready(function () {
     getURLParams();
 
-    if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE" || !workerId) { 
+    if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE" || !workerId) {
       // have not accepted the hit, we should NOT load a level for them
       $('#start-button').hide();
       $("#accept-hit-message").show();
@@ -584,7 +586,7 @@
     $.post({
       "url": "api/start/",
       "data": {
-        workerID: workerId, 
+        workerID: workerId,
         hitID: hitId,
         assignmentID: assignmentId
       }

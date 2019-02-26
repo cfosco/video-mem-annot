@@ -14,12 +14,12 @@ const VID_TYPES = {
 
 const N_LEVELS_PER_NEW_LIFE = 50;
 
-const didPassLevel = function(overallScore, vigilanceScore) {
-   return overallScore > .75 && vigilanceScore > .9; 
+const didPassLevel = function(overallScore, vigilanceScore, falsePositiveRate) {
+   return overallScore > .75 && vigilanceScore > .9 && falsePositiveRate > 0.4;
 }
 
 // Errors to be used in the API
-class BlockedError extends Error { 
+class BlockedError extends Error {
     constructor(username) {
         const message = "User " + username + " has been blocked."
         super(message);
@@ -60,7 +60,7 @@ async function getUser(workerID) {
   }
 
   let userID;
-  
+
   await withinTX(async (connection) => {
       const users = await connection.query('SELECT id FROM users WHERE worker_id = ?', workerID);
       if (users.length === 0) {
@@ -80,7 +80,7 @@ async function getUser(workerID) {
  */
 async function getVideos(data, seqTemplate) {
   const workerID = data.workerID;
- 
+
   const [nTargets, nFillers, ordering] = seqTemplate;
   const numVideos = nTargets + nFillers;
 
@@ -99,7 +99,7 @@ async function getVideos(data, seqTemplate) {
     [userID, nTargets]
   );
 
-  // select numVideos vids that user hasn't seen yet randomly 
+  // select numVideos vids that user hasn't seen yet randomly
   const randomVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
     + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
@@ -132,7 +132,7 @@ async function getVideos(data, seqTemplate) {
     sqlQuestionmarks += ", ?";
     sqlValues.push(data.hitID);
   }
- 
+
   var taskInputs;
   await withinTX(async (connection) => {
     // figure out the level num
@@ -147,7 +147,7 @@ async function getVideos(data, seqTemplate) {
     const levelID = result.insertId;
 
     // compose and hash the client-side inputs to the level
-    const videos = ordering.map(([index, type]) => { 
+    const videos = ordering.map(([index, type]) => {
       return {
         url: vidsToShow[index].uri,
         type: type
@@ -156,10 +156,10 @@ async function getVideos(data, seqTemplate) {
     taskInputs = { level, videos, levelID };
     const hash = crypto.createHash('sha256');
     hash.update(JSON.stringify(taskInputs));
-    const hashVal = hash.digest('hex');    
+    const hashVal = hash.digest('hex');
 
-    // insert the hash 
-    connection.query('UPDATE levels SET inputs_hash = ? WHERE id = ?', 
+    // insert the hash
+    connection.query('UPDATE levels SET inputs_hash = ? WHERE id = ?',
         [hashVal, levelID]);
 
     const presentationInserts = ordering.map(([index, type], position) => {
@@ -169,9 +169,9 @@ async function getVideos(data, seqTemplate) {
       return [levelID, vidsToShow[index].id, position, vigilance, duplicate, targeted];
     })
     // position: index into the vid seq shown to user
-    // vigilance: was this a 1st or 2nd repeat of a vig video? 
-    // duplicate: was this the second presentation of a video? 
-    // targeted: was this 1st or 2nd repeat of a target video? 
+    // vigilance: was this a 1st or 2nd repeat of a vig video?
+    // duplicate: was this the second presentation of a video?
+    // targeted: was this 1st or 2nd repeat of a target video?
     const bulkInsertPromise = connection.query('INSERT INTO presentations'
       + ' (id_level, id_video, position, vigilance, duplicate, targeted)'
       + ' VALUES ?',
@@ -187,7 +187,7 @@ async function getVideos(data, seqTemplate) {
     promises.push(bulkInsertPromise);
     await Promise.all(promises);
   });
-  
+
  return taskInputs;
 }
 
@@ -198,12 +198,12 @@ async function getVideos(data, seqTemplate) {
  * scores are between 0 and 1; reward is (TODO) a dollar value
  */
 async function saveResponses(
-    workerID, 
-    levelID, 
-    responses, 
-    levelInputs, 
-    reward=config.rewardAmount, 
-    levelsPerLife=N_LEVELS_PER_NEW_LIFE, 
+    workerID,
+    levelID,
+    responses,
+    levelInputs,
+    reward=config.rewardAmount,
+    levelsPerLife=N_LEVELS_PER_NEW_LIFE,
     errorOnFastSubmit=config.errorOnFastSubmit) {
 
   const userID = await getUser(workerID);
@@ -230,8 +230,8 @@ async function saveResponses(
   const presentations = await pool.query('SELECT COUNT(*) AS presentationsCount '
     + 'FROM presentations WHERE id_level = ?', levelID);
   const levelLen = presentations[0].presentationsCount;
- 
-  // check that the time elapsed has not been too short 
+
+  // check that the time elapsed has not been too short
   if (errorOnFastSubmit) {
     // set the minTime to about 1s per video, which should be plenty
     const minTimeMsec = levelLen*1*1000;
@@ -249,7 +249,7 @@ async function saveResponses(
       if (config.enforceSameInputs) {
         const hash = crypto.createHash('sha256');
         hash.update(JSON.stringify(levelInputs));
-        const hashVal = hash.digest('hex');    
+        const hashVal = hash.digest('hex');
         const savedHashVal = levels[0].inputs_hash;
         assert(savedHashVal === hashVal, "Inputs hash does not match");
       }
@@ -289,14 +289,16 @@ async function saveResponses(
     const presentations = await connection.query('SELECT response, duplicate, vigilance'
       + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
     const right = (p) => p.response === p.duplicate;
+    const falsePositive = (p) => (p.response==true && !p.duplicate);
     const numAll = presentations.length;
     const numRight = presentations.filter(right).length;
     const vigilancePresentations = presentations.filter(p => p.vigilance);
     const numVig = vigilancePresentations.length;
     const numVigRight = vigilancePresentations.filter(right).length;
+    falsePositiveRate = presentations.filter(falsePositive) / numAll;
     overallScore = numRight / numAll;
     vigilanceScore = numVigRight / numVig;
-    passed = didPassLevel(overallScore, vigilanceScore);
+    passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);
     await connection.query('UPDATE levels SET score = ?, reward = ? WHERE id = ?', [overallScore, reward, levelID]);
 
     // update num lives
@@ -304,7 +306,7 @@ async function saveResponses(
     const oldLives = livesQuery[0].num_lives;
 
     numLives = oldLives;
-    if (levelNum == 1) { 
+    if (levelNum == 1) {
         if (passed) {
             numLives++;
         } else {
@@ -337,7 +339,7 @@ async function saveResponses(
 
 module.exports = {
   getVideos,
-  saveResponses, 
+  saveResponses,
   BlockedError,
   UnauthenticatedError,
   OutOfVidsError,
