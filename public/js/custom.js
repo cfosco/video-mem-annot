@@ -1,5 +1,17 @@
 (function () {
 
+  // add playing property to video elements
+  Object.defineProperty(HTMLMediaElement.prototype, 'playing', {
+    get: function() {
+      return !!(
+        this.currentTime > 0
+        && !this.paused
+        && !this.ended
+        && this.readyState > 2
+      );
+    }
+  });
+
   // populated from query
   var assignmentId;
   var workerId;
@@ -82,7 +94,7 @@
   function showTask(taskData) {
     
     // constants
-    var BASE_PATH_VIDEOS = "http://data.csail.mit.edu/soundnet/actions3/";
+    var BASE_PATH_VIDEOS = "https://data.csail.mit.edu/soundnet/actions3/";
     var VID_TYPES = {
       TARGET_REPEAT: "target_repeat",
       VIG_REPEAT: "vig_repeat",
@@ -482,6 +494,9 @@
       video.dataset.vidType = type;
       video.muted = 'muted';
       video.innerHTML = 'Your browser does not support HTML5 video.';
+      video.setAttribute('playsinline', src); // needed by iOS
+      video.load(); // needed by iOS
+      video.style.visibility = 'hidden';
       videoContainer.appendChild(video);
       videoElements.push(video);
 
@@ -520,6 +535,7 @@
       function playIfReady() {
         console.log("checking if ready", vidToPlay.readyState);
         if (vidToPlay.readyState == 4) {
+          vidToPlay.style.visibility = 'visible';
           vidToPlay.play();
         }
       }
@@ -529,7 +545,7 @@
 
     // HANDLE KEYPRESS (Spacebar)
     document.onkeydown = function (e) {
-      if (e.keyCode == 32 && videoElements.length > 0) {
+      if (e.keyCode == 32 && videoElements.length > 0 && videoElements[0].playing) {
         e.preventDefault(); // don't move page
         handleCheck(true, true);
       }
