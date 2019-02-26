@@ -26,9 +26,10 @@ function calcAnswers(videos, correct) {
     }
     return answer;
   });
-  return answers.map((response) => ({
+  return answers.map((response, i) => ({
     response,
-    time: Math.random() * 3
+    startMsec: i * 3000,
+    durationMsec: Math.random() * 3000
   }));
 }
 
@@ -413,17 +414,14 @@ describe('Test that accuracy metrics are saved in the db', () => {
             [3, "vig_repeat"]
         ]];
         const inputs = await getVideos({workerID: username}, shortTemplate);
-        //const {videos, level} = inputs;
-        const time = 2;
-        const answers = [
-            { response: true, time }, 
-            { response: false, time }, 
-            { response: true, time }, 
-            { response: false, time }, 
-            { response: true, time }, 
-            { response: false, time }, 
-            { response: false, time }, 
-        ];
+        const boolAnswers = [true, false, true, false, true, false, false]
+        const answers = boolAnswers.map((response, i) => {
+          return {
+            response,
+            startMsec: i * 3000,
+            durationMsec: 3000
+          }
+        });
         const {
           overallScore,
           vigilanceScore,

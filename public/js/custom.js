@@ -260,7 +260,7 @@
         var suffix = '$'
       }
 
-      var v_width = Math.min($("#app").width()*0.9, 100);
+      var v_width = Math.min($("#app").width()*0.9, 360);
       // var v_height = $(window).height();
       // console.log(v_width, v_height)
       var margin = { top: 40, right: 50, bottom: 50, left: 50 };
@@ -443,6 +443,9 @@
       );
     }
 
+    var gameStartMsec;
+    var videoStartMsec;
+
     /**
      * Call at the end of the video or when the user presses spacebar
      * @param {boolean} response user says is or isn't repeat
@@ -453,7 +456,8 @@
 
       responses.push({
         response,
-        time: videoElements[0].currentTime
+        startMsec: videoStartMsec,
+        durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec)
       });
       var right = isRepeat() === response;
       checked = true;
@@ -536,6 +540,10 @@
         console.log("checking if ready", vidToPlay.readyState);
         if (vidToPlay.readyState == 4) {
           vidToPlay.style.visibility = 'visible';
+          if (gameStartMsec === undefined) {
+            gameStartMsec = (new Date()).getTime();
+          }
+          videoStartMsec = (new Date()).getTime() - gameStartMsec;
           vidToPlay.play();
         }
       }

@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS presentations (
   targeted BOOLEAN NOT NULL,
   duplicate BOOLEAN NOT NULL,
   response BOOLEAN,
-  seconds DECIMAL(5,4)
+  start_msec INT,
+  duration_msec INT
 );
 
 

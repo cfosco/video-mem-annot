@@ -286,9 +286,10 @@ async function saveResponses(
         assert(responses.length == levelLen, "responses.length does not match the length of the level ");
       }
       responses.forEach((elt) => {
-        const { response, time } = elt;
+        const { response, startMsec, durationMsec } = elt;
         assert(typeof(response) == "boolean", "responses should be a boolean");
-        assert(typeof(time) == "number", "time should be a number");
+        assert(typeof(startMsec) == "number", "start time should be a number");
+        assert(typeof(durationMsec) == "number", "duration should be a number");
       });
   } catch(error) {
     debug("Error while checking validity of inputs:", error);
@@ -303,10 +304,10 @@ async function saveResponses(
   await withinTX(async (connection) => {
     // update db with answers
     const values = [];
-    responses.forEach(({ response, time }, position) => {
-      values.push.apply(values, [response, time, position, levelID]); // append all
+    responses.forEach(({ response, startMsec, durationMsec }, position) => {
+      values.push.apply(values, [response, startMsec, durationMsec, position, levelID]); // append all
     });
-    const query = 'UPDATE presentations SET response = ?, seconds = ? WHERE position = ? AND id_level = ?; '
+    const query = 'UPDATE presentations SET response = ?, start_msec = ?, duration_msec = ? WHERE position = ? AND id_level = ?; '
       .repeat(responses.length);
     await connection.query(query, values);
 
