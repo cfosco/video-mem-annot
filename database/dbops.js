@@ -283,8 +283,8 @@ async function saveResponses(
         const hashVal = hash.digest('hex');
         const savedHashVal = levels[0].inputs_hash;
         assert(savedHashVal === hashVal, "Inputs hash does not match");
+        assert(responses.length == levelLen, "responses.length does not match the length of the level ");
       }
-      assert(responses.length == levelLen, "responses.length does not match the length of the level ");
       responses.forEach((elt) => {
         const { response, time } = elt;
         assert(typeof(response) == "boolean", "responses should be a boolean");
