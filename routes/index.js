@@ -26,7 +26,7 @@ function respondToError(err, res) {
     } else if (err instanceof InvalidResultsError) {
         res.send(400, err.message);
     } else {
-        debug(err);
+        debug("500 error", err);
         res.send(500);
     }
 }

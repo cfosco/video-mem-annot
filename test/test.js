@@ -271,6 +271,20 @@ describe('Test save answers', () => {
   });
 });
 
+describe('Test that accuracy function is working', () => {
+    test('Check that user with bad vigilance fails', async (done) => {
+        done();
+    });
+
+    test('Check that user with bad false positive fails', async (done) => {
+        done();
+    });
+
+    test('Check that users can pass even with pad performance on targets', async (done) => {
+        done();
+    });
+});
+
 describe('Test lives increment when correct', () => {
   test('Lives should increment at levelsPerLife', async (done) => {
     const username = 'testLivesInc';
