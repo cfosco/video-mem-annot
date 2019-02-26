@@ -49,18 +49,20 @@ async function checkThrowsError(asyncFunc, errorClass) {
     expect(error).toBeInstanceOf(errorClass);
 }
 
-beforeAll(async (done) => {
-  // clears all the tables before running tests
+async function wipeDB (populateVideos) {
   for (let table of ['presentations', 'levels', 'users', 'videos']) {
     await pool.query('DROP TABLE ' + table)
       .catch((e) => {
         debug("error dropping table", e);
       }) // don't care
   }
-  await initDB();
-  done();
-}, 10000);
+  await initDB(populateVideos);
+}
 
+beforeAll(async (done) => {
+    await wipeDB(populateVideos=true);
+    done();
+}, 10000);
 
 // tests
 describe('Test get sequence template', () => {
@@ -267,6 +269,20 @@ describe('Test save answers', () => {
     expect(completedLevels[0].reward).toEqual(.5);
     done();
   });
+});
+
+describe('Test that accuracy function is working', () => {
+    test('Check that user with bad vigilance fails', async (done) => {
+        done();
+    });
+
+    test('Check that user with bad false positive fails', async (done) => {
+        done();
+    });
+
+    test('Check that users can pass even with pad performance on targets', async (done) => {
+        done();
+    });
 });
 
 describe('Test lives increment when correct', () => {
@@ -607,4 +623,130 @@ describe('Test API invalid user', () => {
           done();
         });
     });
+});
+
+describe('Test concurrency', () => {
+    const playLevel = function(i) {
+        const username = "testConcur" + i;
+        return new Promise( (resolve, reject) => {
+          var agent = request(app);
+          // start the game
+          agent.post('/api/start')
+          .send({ workerID: username})
+          .expect(200)
+          .end((err, res) => {
+            if (err) return reject(err);
+            const inputs = res.body;
+            const { videos, level, levelID } = inputs;
+            assert(videos.length > 1);
+            expect(level).toBe(1);
+            // end the game
+            const answers = calcAnswers(videos, correct=true);
+            agent.post('/api/end')
+              .send({
+                workerID: username, 
+                levelID: levelID, 
+                responses: answers, 
+                inputs 
+              })
+              .expect(200)
+              .end((err, res) => {
+                  if (err) return reject(err);
+                  const {
+                    overallScore,
+                    vigilanceScore,
+                    passed,
+                    numLives,
+                    completedLevels
+                   } = res.body;
+                   expect(overallScore).toBe(1);
+                   expect(vigilanceScore).toBe(1);
+                   expect(passed).toBe(true);
+                   expect(numLives).toBe(2);
+                   expect(completedLevels.length).toBe(1);
+                   const { score, reward } = completedLevels[0];
+                   expect(score).toEqual(1);
+                   expect(reward).toEqual(config.rewardAmount);
+                   resolve(true);
+              });
+          });
+        });
+    }
+            
+    test('Concurrent requests should complete succesfully', async (done) => {
+        const username = "testConcur";
+        // make a bunch of promises
+        const promises = [];
+        for (let i = 0; i < 20; i++) {
+            promises.push(playLevel(i));
+        }
+        await Promise.all(promises);
+        done();
+    });
+});
+
+describe('Test video prioritization', () => {
+    const nHighPri = 10;
+    const nLowPri = 10;
+
+    beforeEach(async (done) => {
+      await wipeDB(populateVideos=false);
+      // add high and low pri vids to the db
+      for (let i = 0; i < nHighPri; i++) {
+          await pool.query("INSERT INTO videos (uri) VALUES (?)", i);
+      }
+      for (let i = nHighPri; i < nLowPri+nHighPri; i++) {
+          await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, 10]);
+      }
+      done();
+    }, 10000);
+
+    afterEach(async (done) => {
+        await wipeDB(populateVideos=true);
+        done();
+    }, 10000);
+
+    test('Targets should be chosen based on priority', async (done) => {
+      const username = "testTargetPriority";
+      const nTarget = 3;
+      const nFiller = 5;
+      const order = [];
+      for (let i = 0; i < nTarget; i++) {
+          order.push([i, "target"]);
+      }
+      for (let i = 0; i < nFiller; i++) {
+          order.push([i, "filler"]);
+      }
+      const template = [nTarget, nFiller, order];
+      const {videos} = await getVideos({workerID: username}, template);
+
+      // check that the first several are all high-pri videos
+      for (let i = 0; i < nTarget; i++) {
+          const vidid = parseInt(videos[i].url);
+          assert(parseInt(videos[i].url) < nHighPri, "target should be a high-pri video");
+      }
+      done();
+    }, 10000);
+
+    test('Fillers should be chosen randomly', async (done) => {
+      const username = "testFillerPriority";
+      // make sure it is possible that all vids come from one category
+      const nVids = Math.min(nHighPri, nLowPri);
+      const order = [];
+      for (let i = 0; i < nVids; i++) {
+          order.push([i, "filler"]);
+      }
+      const template = [0, nVids, order];
+      const { videos } = await getVideos({workerID: username}, template);
+      // check that there is a mix of vid types 
+      var nActualHigh = 0;
+      var nActualLow = 0;
+      videos.map(({ url }) => {
+          const vidid = parseInt(url);
+          return parseInt(url) < nHighPri ? nActualHigh++ : nActualLow++;
+      });        
+      assert (nActualHigh > 0, "Warning; fillers were all low-pri");
+      assert (nActualLow > 0, "Warning: fillers were all high-pri");
+      done();
+    }, 10000);
 });

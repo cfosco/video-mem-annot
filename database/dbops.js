@@ -172,19 +172,20 @@ async function getVideos(data, seqTemplate) {
     // vigilance: was this a 1st or 2nd repeat of a vig video?
     // duplicate: was this the second presentation of a video?
     // targeted: was this 1st or 2nd repeat of a target video?
-    const bulkInsertPromise = connection.query('INSERT INTO presentations'
+    const promises = [connection.query('INSERT INTO presentations'
       + ' (id_level, id_video, position, vigilance, duplicate, targeted)'
       + ' VALUES ?',
       [presentationInserts]
-    );
+    )];
 
-    const promises = ordering
+    const targetIds = ordering
       .filter(([index, type]) => type === VID_TYPES.TARGET)
-      .map(([index]) => connection.query('UPDATE videos SET labels = labels + 1'
-        + ' WHERE id = ?', vidsToShow[index].id)
-      );
-
-    promises.push(bulkInsertPromise);
+      .map(([index]) => vidsToShow[index].id);
+    if (targetIds.length > 0) {
+      const targetUpdatesQuery = 'UPDATE videos SET labels = labels + 1  WHERE id = ?;'
+        .repeat(targetIds.length);
+      promises.push(connection.query(targetUpdatesQuery, targetIds));
+    }
     await Promise.all(promises);
   });
 
@@ -270,14 +271,13 @@ async function saveResponses(
   var passed;
   await withinTX(async (connection) => {
     // update db with answers
-    const updates = responses.map(({ response, time }, position) =>
-      connection.query(
-        'UPDATE presentations SET response = ?, seconds = ? WHERE position = ? AND id_level = ?',
-        [response, time, position, levelID]
-      )
-    );
-
-    await Promise.all(updates);
+    const values = [];
+    responses.forEach(({ response, time }, position) => {
+      values.push.apply(values, [response, time, position, levelID]); // append all
+    });
+    const query = 'UPDATE presentations SET response = ?, seconds = ? WHERE position = ? AND id_level = ?; '
+      .repeat(responses.length);
+    await connection.query(query, values);
 
     // calcualate level number
     const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '

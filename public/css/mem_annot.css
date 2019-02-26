@@ -29,6 +29,10 @@ html, body {
   height: 100%;
 }
 
+#page-title {
+  padding:10px;
+}
+
 /* must be flex with height 100vh to push disclaimer to bottom */
 #instructions {
   padding: 16px;

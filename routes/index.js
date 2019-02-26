@@ -1,4 +1,5 @@
 const express = require('express');
+const debug = require('debug')('memento:server');
 const { 
     getVideos, 
     saveResponses, 
@@ -25,6 +26,7 @@ function respondToError(err, res) {
     } else if (err instanceof InvalidResultsError) {
         res.send(400, err.message);
     } else {
+        debug("500 error", err);
         res.send(500);
     }
 }

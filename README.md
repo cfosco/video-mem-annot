@@ -1,6 +1,10 @@
 # Generalized MTurk Task Template
 A general-purpose template for Amazon Mechanical Turk tasks.
 
+### Getting Data
+Run `./dump_db.sh databasename username` (it will then ask for the mysql
+password) to download tables and save them to tab-separated values files.
+
 ### Development
 The first time you clone: `npm install`
 
@@ -8,9 +12,12 @@ To run the app: `npm start`
 
 To run tests: `npm test`
 
-You need to add MySQL database credentials by setting the environment variables specified in `database/databaseConfig` or by editing the file directly (please do not push changes to the file if you do so).
+You need to add MySQL database credentials by setting the database-related environment variables specified in `config.js` (`MYSQL_HOST`, `MYSQL_USER`, AND `MYSQL_PASS`) or by editing the file directly (please do not push changes to the file if you do so). You must also set hte environment variable `MEMENTO_ENV` to one of `prod`, `dev`, or `test`. 
 
 Jupyter notebooks in the `mturk` folder are provided for launching and monitoring HITs. Edit the `hitCreation` fields in `config.json` to define how to set up your HITs.
+
+### Running as a service with forever
+Run the script `startForever.sh` to run as a forever script. Logs will be output to files in the `logs` folder. Upon starting, you should check the `err.log` and `forever.log` files to ensure that startup was succesful. To kill the forever service, run `ps aux | grep forever` and `kill <pid>` with the correct pid. 
 
 #### Dev Environment Variables
 - Set `DEBUG` to `memento:server` to get additional logs

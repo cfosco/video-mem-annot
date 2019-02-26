@@ -1,26 +1,31 @@
 const debug = require('debug')('memento:server');
 
+const dbConfigBase = {
+  connectionLimit: 100,
+  multipleStatements: true,
+};
+
 const dev = {
   dbConfig: {
-      connectionLimit : 100,
-      host            : process.env.MYSQL_HOST,
-      user            : process.env.MYSQL_USER,
-      password        : process.env.MYSQL_PASS,
-      database        : 'memento'
+    ...dbConfigBase,
+    host            : process.env.MYSQL_HOST,
+    user            : process.env.MYSQL_USER,
+    password        : process.env.MYSQL_PASS,
+    database        : 'memento_dev',
   }, 
   enableBlockUsers    : false,
-  errorOnFastSubmit   : false,
+  errorOnFastSubmit   : true,
   enforceSameInputs   : true,
   rewardAmount        : 1,
 } 
 
 const test = {
   dbConfig: {
-      connectionLimit : 100,
-      host            : process.env.MYSQL_HOST,
-      user            : process.env.MYSQL_USER,
-      password        : process.env.MYSQL_PASS,
-      database        : 'memento'  // TODO: separate test db!!!
+    ...dbConfigBase,
+    host            : process.env.MYSQL_HOST,
+    user            : process.env.MYSQL_USER,
+    password        : process.env.MYSQL_PASS,
+    database        : 'memento_test',
   }, 
   enableBlockUsers    : true,
   errorOnFastSubmit   : false,
@@ -28,8 +33,19 @@ const test = {
   rewardAmount        : 1,
 }
 
-// TODO: specify a prod config
-const prod = dev;
+const prod = {
+  dbConfig: {
+    ...dbConfigBase,
+    host            : process.env.MYSQL_HOST,
+    user            : process.env.MYSQL_USER,
+    password        : process.env.MYSQL_PASS,
+    database        : 'memento_prod'
+  }, 
+  enableBlockUsers    : true,
+  errorOnFastSubmit   : true,
+  enforceSameInputs   : true,
+  rewardAmount        : 1,
+}
 
 const configs = { prod, dev, test }
 
