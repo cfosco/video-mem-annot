@@ -12,7 +12,7 @@
 
   // Debug settings
   var DEBUG = {
-    speedup: false,
+    only_one_video: true,
     fakeSubmit: false
   }
 
@@ -80,7 +80,7 @@
   }
 
   function showTask(taskData) {
-    
+
     // constants
     var BASE_PATH_VIDEOS = "http://data.csail.mit.edu/soundnet/actions3/";
     var VID_TYPES = {
@@ -248,11 +248,11 @@
         var suffix = '$'
       }
 
-      var v_width = $("#app").width();
+      var v_width = Math.min($("#app").width()*0.9, 100);
       // var v_height = $(window).height();
       // console.log(v_width, v_height)
       var margin = { top: 40, right: 50, bottom: 50, left: 50 };
-      var width = v_width*0.45 - margin.left - margin.right;
+      var width = v_width - margin.left - margin.right;
       var height = width - margin.top - margin.bottom;
 
       var data = yData.map(function(y, x) { return [x + 1, y || 0]; });
@@ -592,7 +592,7 @@
       }
     }).done(function (res) {
 
-      if (DEBUG.speedup) {
+      if (DEBUG.only_one_video) {
         res.videos = res.videos.slice(0, 1);
       }
 
