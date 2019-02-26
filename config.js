@@ -12,12 +12,12 @@ const dev = {
     user            : process.env.MYSQL_USER,
     password        : process.env.MYSQL_PASS,
     database        : 'memento_dev',
-  }, 
+  },
   enableBlockUsers    : false,
-  errorOnFastSubmit   : true,
-  enforceSameInputs   : true,
+  errorOnFastSubmit   : false,
+  enforceSameInputs   : false,
   rewardAmount        : 1,
-} 
+}
 
 const test = {
   dbConfig: {
@@ -26,7 +26,7 @@ const test = {
     user            : process.env.MYSQL_USER,
     password        : process.env.MYSQL_PASS,
     database        : 'memento_test',
-  }, 
+  },
   enableBlockUsers    : true,
   errorOnFastSubmit   : false,
   enforceSameInputs   : true,
@@ -40,7 +40,7 @@ const prod = {
     user            : process.env.MYSQL_USER,
     password        : process.env.MYSQL_PASS,
     database        : 'memento_prod'
-  }, 
+  },
   enableBlockUsers    : true,
   errorOnFastSubmit   : true,
   enforceSameInputs   : true,
@@ -49,7 +49,7 @@ const prod = {
 
 const configs = { prod, dev, test }
 
-// NODE_ENV is set by jest to 'test' iff null at start. As such, it cannot be 
+// NODE_ENV is set by jest to 'test' iff null at start. As such, it cannot be
 // set by us to specify dev vs prod.
 const node_env = process.env.NODE_ENV;
 // set MEMENTO_ENV to prod, dev, or test
