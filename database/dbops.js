@@ -15,7 +15,7 @@ const VID_TYPES = {
 const N_LEVELS_PER_NEW_LIFE = 50;
 
 const didPassLevel = function(overallScore, vigilanceScore, falsePositiveRate) {
-   return overallScore > .75 && vigilanceScore > .9 && falsePositiveRate < 0.8;
+   return overallScore > .7 && vigilanceScore > .7 && falsePositiveRate < 0.7;
 }
 
 // Errors to be used in the API
