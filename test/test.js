@@ -911,4 +911,34 @@ describe('Test video prioritization', () => {
       assert (nActualLow > 0, "Warning: fillers were all high-pri");
       done();
     }, 10000);
+
+    test('Videos served to users should not conflict with each other', async(done) => {
+        const lenTemplate = 5;
+        const order = []; 
+        for (let i = 0; i < lenTemplate; i++) {
+            order.push([i, "filler"]);
+        }
+        const template = [0, lenTemplate, order];
+        const user1 = "user1";
+        const user2 = "user2";
+        const expectedNumLevels = Math.floor((nHighPri + nLowPri)/lenTemplate);
+        // user 1 goes first
+        for (let user of [user1, user2]) {
+            const seen = new Set();
+            for (let i = 0; i < expectedNumLevels; i++) {
+                debug("User " + user + " i " + i);
+                const { videos } = await getVideos({workerID: user}, template);
+                videos.map(({ url }) => {
+                    expect(seen.has(url)).toBe(false);
+                    seen.add(url);
+                });
+            }
+            debug("User " + user + " last one");
+            await checkThrowsError(async() => {
+                const vids = await getVideos({workerID: user}, template);
+            }, OutOfVidsError);
+        };
+        
+        done();
+    }, 10000);
 });

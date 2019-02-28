@@ -15,7 +15,7 @@ const VID_TYPES = {
 const N_LEVELS_PER_NEW_LIFE = 50;
 
 const didPassLevel = function(overallScore, vigilanceScore, falsePositiveRate) {
-   return overallScore > .75 && vigilanceScore > .9 && falsePositiveRate < 0.8;
+   return overallScore > .7 && vigilanceScore > .7 && falsePositiveRate < .7;
 }
 
 // Errors to be used in the API
@@ -94,7 +94,9 @@ async function getVideos(data, seqTemplate) {
   // select nTargets least-seen videos user hasn't seen yet
   const targetVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
-    + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
+      + ' (SELECT id_video FROM levels '
+      + 'JOIN presentations ON levels.id = presentations.id_level '
+      + 'WHERE id_user = ?)'
     + ' ORDER BY labels ASC LIMIT ?',
     [userID, nTargets]
   );
@@ -102,7 +104,9 @@ async function getVideos(data, seqTemplate) {
   // select numVideos vids that user hasn't seen yet randomly
   const randomVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
-    + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
+      + ' (SELECT id_video FROM levels '
+      + 'JOIN presentations ON levels.id = presentations.id_level '
+      + 'WHERE id_user = ?)'
     + ' ORDER BY RAND() LIMIT ?',
     [userID, numVideos]
   );
@@ -112,7 +116,7 @@ async function getVideos(data, seqTemplate) {
   const targetsSet = new Set(targetVids.map(({id, uri}) => id));
   const potentialFillers = randomVids.filter(({id, uri}) => !targetsSet.has(id));
 
-  if (potentialFillers.length < nFillers) {
+  if (potentialFillers.length < nFillers || targetVids.length < nTargets) {
     throw new OutOfVidsError(user.worker_id);
   }
   const fillerVids = potentialFillers.slice(0, nFillers);
@@ -212,14 +216,14 @@ function calcScores(presentations) {
   const numVigRight = vigilancePresentations.filter(right).length;
   const numNonDuplicate = presentations.filter(nonDuplicate).length;
 
-  falsePositiveRate = numNonDuplicate == 0 
-                    ? 0 
+  falsePositiveRate = numNonDuplicate == 0
+                    ? 0
                     : presentations.filter(falsePositive).length / numNonDuplicate;
-  overallScore = numAll == 0 
+  overallScore = numAll == 0
                ? 1
                : numRight / numAll;
   vigilanceScore = numVig == 0
-                 ? 1 
+                 ? 1
                  : numVigRight / numVig;
 
   passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);
