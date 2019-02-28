@@ -94,7 +94,9 @@ async function getVideos(data, seqTemplate) {
   // select nTargets least-seen videos user hasn't seen yet
   const targetVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
-    + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
+      + ' (SELECT id_video FROM levels '
+      + 'JOIN presentations ON levels.id = presentations.id_level '
+      + 'WHERE id_user = ?)'
     + ' ORDER BY labels ASC LIMIT ?',
     [userID, nTargets]
   );
@@ -102,7 +104,9 @@ async function getVideos(data, seqTemplate) {
   // select numVideos vids that user hasn't seen yet randomly
   const randomVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
-    + ' (SELECT id_video FROM presentations, levels WHERE id_user = ?)'
+      + ' (SELECT id_video FROM levels '
+      + 'JOIN presentations ON levels.id = presentations.id_level '
+      + 'WHERE id_user = ?)'
     + ' ORDER BY RAND() LIMIT ?',
     [userID, numVideos]
   );
@@ -112,7 +116,7 @@ async function getVideos(data, seqTemplate) {
   const targetsSet = new Set(targetVids.map(({id, uri}) => id));
   const potentialFillers = randomVids.filter(({id, uri}) => !targetsSet.has(id));
 
-  if (potentialFillers.length < nFillers) {
+  if (potentialFillers.length < nFillers || targetVids.length < nTargets) {
     throw new OutOfVidsError(user.worker_id);
   }
   const fillerVids = potentialFillers.slice(0, nFillers);
