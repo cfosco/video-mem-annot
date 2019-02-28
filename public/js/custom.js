@@ -498,7 +498,7 @@
       video.dataset.vidType = type;
       video.muted = 'muted';
       video.innerHTML = 'Your browser does not support HTML5 video.';
-      video.setAttribute('playsinline', src); // needed by iOS
+      video.setAttribute('playsinline', 'playsinline'); // needed by iOS
       video.load(); // needed by iOS
       video.style.visibility = 'hidden';
       videoContainer.appendChild(video);
