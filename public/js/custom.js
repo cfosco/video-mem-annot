@@ -492,7 +492,7 @@
      * @param {valueof VID_TYPES} type
      */
     function newVideo(src, type) {
-      console.log('SRC FOR NEW VIDEO:',src)
+      console.log('SRC FOR NEW VIDEO:',src);
       var video = document.createElement('video');
       video.setAttribute('src', src);
       video.dataset.vidType = type;
