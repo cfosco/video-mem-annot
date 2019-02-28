@@ -15,7 +15,7 @@ const VID_TYPES = {
 const N_LEVELS_PER_NEW_LIFE = 50;
 
 const didPassLevel = function(overallScore, vigilanceScore, falsePositiveRate) {
-   return overallScore > .75 && vigilanceScore > .9 && falsePositiveRate < 0.8;
+   return overallScore > .7 && vigilanceScore > .7 && falsePositiveRate < .7;
 }
 
 // Errors to be used in the API
@@ -216,14 +216,14 @@ function calcScores(presentations) {
   const numVigRight = vigilancePresentations.filter(right).length;
   const numNonDuplicate = presentations.filter(nonDuplicate).length;
 
-  falsePositiveRate = numNonDuplicate == 0 
-                    ? 0 
+  falsePositiveRate = numNonDuplicate == 0
+                    ? 0
                     : presentations.filter(falsePositive).length / numNonDuplicate;
-  overallScore = numAll == 0 
+  overallScore = numAll == 0
                ? 1
                : numRight / numAll;
   vigilanceScore = numVig == 0
-                 ? 1 
+                 ? 1
                  : numVigRight / numVig;
 
   passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);

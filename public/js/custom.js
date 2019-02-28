@@ -24,7 +24,7 @@
 
   // Debug settings
   var DEBUG = {
-    onlyOneVideo: true,
+    onlyOneVideo: false,
     fakeSubmit: false
   }
 
