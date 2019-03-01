@@ -106,12 +106,13 @@ we do this by having a smaller container with hidden overflow */
 }
 
 /* override style to make top video show */
-#video_container > video:first-child {
+#video_container > video:first-of-type {
   display: initial;
 }
 
 #progress-bar {
   width: 100%;
+  margin-top:10px;
 }
 
 #endGame {
