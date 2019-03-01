@@ -262,8 +262,6 @@
       }
 
       var v_width = Math.min($("#app").width()*0.9, 360);
-      // var v_height = $(window).height();
-      // console.log(v_width, v_height)
       var margin = { top: 40, right: 50, bottom: 50, left: 50 };
       var width = v_width - margin.left - margin.right;
       var height = width - margin.top - margin.bottom;
@@ -493,7 +491,6 @@
      * @param {valueof VID_TYPES} type
      */
     function newVideo(src, type) {
-      console.log('SRC FOR NEW VIDEO:',src);
       var video = document.createElement('video');
       video.setAttribute('src', src);
       video.dataset.vidType = type;
@@ -554,6 +551,7 @@
       function playIfReady() {
         console.log("checking if ready", vidToPlay.readyState);
         if (vidToPlay.readyState == 4) {
+          $("#vid-loading-dimmer").addClass('disabled').removeClass('active');
           vidToPlay.style.visibility = 'visible';
           if (gameStartMsec === undefined) {
             gameStartMsec = (new Date()).getTime();
@@ -562,6 +560,9 @@
           vidToPlay.play();
         } else if (vidToPlay.error) {
           onError();
+        } else {
+          // show loading 
+          $("#vid-loading-dimmer").addClass('active').removeClass('disabled');
         }
       }
 
