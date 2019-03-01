@@ -127,6 +127,7 @@
     var JUMP_ON_RIGHT = true;
     var JUMP_ON_WRONG = false;
     var NUM_LOAD_AHEAD = 4;
+    var MAX_SKIPS_IN_ROW = 3;
 
     // get DOM references
     var $progressBar = $("#progress-bar > .ui.progress");
@@ -444,6 +445,7 @@
 
     var gameStartMsec;
     var videoStartMsec;
+    var numSkipsInRow = 0;
 
     /**
      * Call at the end of the video or when the user presses spacebar
@@ -483,6 +485,47 @@
           $mainInterface.css('animation', val);
         }
       }
+      numSkipsInRow = 0;
+    }
+
+    /**
+     * Call when a video throws a mediaError to log the occurrence and skip the video
+     * @param {number} mediaErrorCode - 1 (aborted), 2 (network), 3 (decode), 4 (src not supported)
+     */
+    function skipOnError(mediaErrorCode) {
+      responses.push({
+        response: null,
+        startMsec: videoStartMsec,
+        durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec),
+        mediaErrorCode
+      });
+      checked = true;
+      playNextVideo();
+      numSkipsInRow += 1;
+    }
+
+    function playNextVideo() {
+      // remove current video
+      videoElements[0].ontimeupdate = function () { }; // sometimes it gets called again
+      videoElements[0].remove();
+      // play next video
+      videoElements.shift();
+      console.log(videoElements.length)
+      if (videoElements.length > 0) {
+        // queue up another video
+        if (counter < transcripts.length) {
+          newVideo(transcripts[counter], types[counter]);
+        }
+        counter += 1;
+        checked = false;
+        // play the next video
+        playWhenReady(videoElements[0]);
+        // update progress bar
+        $progressBar.progress("set progress", counter - NUM_LOAD_AHEAD);
+        // update state
+      } else {
+        submitData();
+      }
     }
 
     /**
@@ -507,45 +550,32 @@
           // check for missed repeat
           handleCheck(false, false);
           // remove active video
-          video.ontimeupdate = function () { }; // sometimes it gets called again
-          video.remove();
-          // play next video
-          videoElements.shift();
-
-          if (videoElements.length > 0) {
-            //const vidToPlay = videoElements[0];
-            playWhenReady(videoElements[0]);
-
-            //videoElements[0].play();
-            // queue up another video
-            if (counter < transcripts.length) {
-              newVideo(transcripts[counter], types[counter]);
-            }
-            // update progress bar
-            $progressBar.progress("set progress", counter - NUM_LOAD_AHEAD);
-            // update state
-            counter += 1;
-            checked = false;
-          } else {
-            submitData();
-          }
+          playNextVideo();
         }
       }
     }
 
     function playWhenReady(vidToPlay) {
       function onError() {
-        console.log("video error", vidToPlay.error);
-        var headerText = "There was an error loading this video.";
-        var bodyHTML = "We're sorry for the inconvenience. If you see this, please send a screenshot of this error to "
-        + '<a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a> along with your Worker and Assignment ids '
-        + 'and you will be compensated.<br>'
-        + "<b>Video url: </b>" + vidToPlay.src + "<br>"
-        + "<b>Error code: </b>" + vidToPlay.error.code + "<br>"
-        + "<b>Error message: </b>" + vidToPlay.error.message;
-        console.log("err", vidToPlay.error);
-        showError(bodyHTML, headerText);
-        // TODO skip to next video if it's a decoding error (code 3)
+        console.log('video error', vidToPlay.error);
+        if (
+          (
+            vidToPlay.error.code === MediaError.MEDIA_ERR_DECODE
+            || vidToPlay.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
+          )
+          && numSkipsInRow < MAX_SKIPS_IN_ROW
+        ) {
+          skipOnError(vidToPlay.error.code);
+        } else {
+          var headerText = "There was an error loading this video.";
+          var bodyHTML = "We're sorry for the inconvenience. If you see this, please send a screenshot of this error to "
+            + '<a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a> along with your Worker and Assignment ids '
+            + 'and you will be compensated.<br>'
+            + "<b>Video url: </b>" + vidToPlay.src + "<br>"
+            + "<b>Error code: </b>" + vidToPlay.error.code + "<br>"
+            + "<b>Error message: </b>" + vidToPlay.error.message;
+          showError(bodyHTML, headerText);
+        }
       }
 
       function playIfReady() {

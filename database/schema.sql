@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS presentations (
   duplicate BOOLEAN NOT NULL,
   response BOOLEAN,
   start_msec INT,
-  duration_msec INT
+  duration_msec INT,
+  media_error_code TINYINT
 );
 
 

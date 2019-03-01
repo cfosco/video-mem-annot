@@ -290,10 +290,15 @@ async function saveResponses(
         assert(responses.length == levelLen, "responses.length does not match the length of the level ");
       }
       responses.forEach((elt) => {
-        const { response, startMsec, durationMsec } = elt;
-        assert(typeof(response) == "boolean", "responses should be a boolean");
-        assert(typeof(startMsec) == "number", "start time should be a number");
-        assert(typeof(durationMsec) == "number", "duration should be a number");
+        const { response, startMsec, durationMsec, mediaErrorCode } = elt;
+        assert(
+          (typeof(response) === "boolean" && mediaErrorCode == null)
+          || (response == null && typeof(mediaErrorCode) === "number"),
+          "a valid response should be a boolean with a null/undefined error\n"
+          + "a valid error should be a null response with a numeric error code"
+        );
+        assert(typeof(startMsec) === "number", "start time should be a number");
+        assert(typeof(durationMsec) === "number", "duration should be a number");
       });
   } catch(error) {
     debug("Error while checking validity of inputs:", error);
@@ -308,10 +313,10 @@ async function saveResponses(
   await withinTX(async (connection) => {
     // update db with answers
     const values = [];
-    responses.forEach(({ response, startMsec, durationMsec }, position) => {
-      values.push.apply(values, [response, startMsec, durationMsec, position, levelID]); // append all
+    responses.forEach(({ response, startMsec, durationMsec, mediaErrorCode }, position) => {
+      values.push.apply(values, [response, startMsec, durationMsec, mediaErrorCode || null, position, levelID]); // append all
     });
-    const query = 'UPDATE presentations SET response = ?, start_msec = ?, duration_msec = ? WHERE position = ? AND id_level = ?; '
+    const query = 'UPDATE presentations SET response = ?, start_msec = ?, duration_msec = ?, media_error_code = ? WHERE position = ? AND id_level = ?; '
       .repeat(responses.length);
     await connection.query(query, values);
 
