@@ -2,14 +2,14 @@
    "hitCreation": {
         "title": "Memento: The Video Memory Game",
         "description": "Indicate which videos you remember by playing a simple memory game on short 3 second videos!",
-        "numTasks": 1,
+        "numTasks": 100,
         "numAssignments": 1,
         "rewardAmount": "1.00",
         "keywords": "videos, memorability, memory, game, fun",
         "duration": 1200,
-        "lifetime": 86400,
+        "lifetime": 106400,
         "taskUrl": "https://memento-game.csail.mit.edu/",
-        "production": false,
+        "production": true,
         "variants": []
     },
     "advanced": {
