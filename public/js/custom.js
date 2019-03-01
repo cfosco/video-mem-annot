@@ -565,20 +565,28 @@
         ) {
           skipOnError(vidToPlay.error.code);
         } else {
-          var headerText = "There was an error loading this video.";
-          var bodyHTML = "We're sorry for the inconvenience. If you see this, please send a screenshot of this error to "
-            + '<a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a> along with your Worker and Assignment ids '
-            + 'and you will be compensated.<br>'
-            + "<b>Video url: </b>" + vidToPlay.src + "<br>"
-            + "<b>Error code: </b>" + vidToPlay.error.code + "<br>"
-            + "<b>Error message: </b>" + vidToPlay.error.message;
+          var headerText = "Network Error";
+          var bodyHTML = "The video could not be loaded."
+            + " This is probably due to a problem with your Internet connection."
+            + " The game will automatically resume when the problem is resolved."
+            + " If you are able to access other websites but the game is still broken,"
+            + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
+            + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
+            + "<br><b>Video url: </b>" + vidToPlay.src
+            + "<br><b>Error code: </b>" + vidToPlay.error.code
+            + "<br><b>Error message: </b>" + vidToPlay.error.message;
           showError(bodyHTML, headerText);
+          setTimeout(() => {
+            vidToPlay.load();
+            playIfReady();
+          }, 3000);
         }
       }
 
       function playIfReady() {
         console.log("checking if ready", vidToPlay.readyState);
         if (vidToPlay.readyState == 4) {
+          hideError();
           $("#vid-loading-dimmer").addClass('disabled').removeClass('active');
           vidToPlay.style.visibility = 'visible';
           if (gameStartMsec === undefined) {
@@ -648,6 +656,11 @@
     $("#instructions").hide();
     $("#experiment").show();
     $("#error-message").show();
+  }
+
+  function hideError() {
+    $("#main-interface").show();
+    $("#error-message").hide();
   }
 
   $(document).ready(function () {
