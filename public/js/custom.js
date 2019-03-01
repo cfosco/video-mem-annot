@@ -465,7 +465,7 @@
 
       if (showFeedback) {
         if ((right && JUMP_ON_RIGHT) || (!right && JUMP_ON_WRONG)) {
-          videoElements[0].currentTime = CLIP_DURATION; // trigger end
+          playNextVideo();
         }
 
         if (PLAY_SOUND) {
@@ -506,7 +506,7 @@
 
     function playNextVideo() {
       // remove current video
-      videoElements[0].ontimeupdate = function () { }; // sometimes it gets called again
+      videoElements[0].onended = function () { }; // sometimes it gets called again
       videoElements[0].remove();
       // play next video
       videoElements.shift();
@@ -545,13 +545,11 @@
       videoContainer.appendChild(video);
       videoElements.push(video);
 
-      video.ontimeupdate = function () {
-        if (video.currentTime >= CLIP_DURATION) {
-          // check for missed repeat
-          handleCheck(false, false);
-          // remove active video
-          playNextVideo();
-        }
+      video.onended = function () {
+        // check for missed repeat
+        handleCheck(false, false);
+        // remove active video
+        playNextVideo();
       }
     }
 
@@ -587,7 +585,13 @@
             gameStartMsec = (new Date()).getTime();
           }
           videoStartMsec = (new Date()).getTime() - gameStartMsec;
-          vidToPlay.play();
+          vidToPlay.play()
+          .catch(function(err) {
+            console.log("could not play back");
+            console.log("err: ", err);
+            var headerText = "There was an error playing this video.";
+            showError("", headerText);
+          });
         } else if (vidToPlay.error) {
           onError();
         } else {
