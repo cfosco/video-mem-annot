@@ -25,7 +25,8 @@
   // Debug settings
   var DEBUG = {
     onlyOneVideo: false,
-    fakeSubmit: false
+    fakeSubmit: false,
+    badVideo: false
   }
 
   /**
@@ -388,7 +389,7 @@
           dataType: 'json'
         }).done(showResultsPage)
         .catch(function(err) {
-          showError(err, headerText="Your answers could not be submitted.")
+          showError(err.responseText, headerText="Your answers could not be submitted.")
         });
       }
     }
@@ -536,6 +537,20 @@
     }
 
     function playWhenReady(vidToPlay) {
+      function onError() {
+        console.log("video error", vidToPlay.error);
+        var headerText = "There was an error loading this video.";
+        var bodyHTML = "We're sorry for the inconvenience. If you see this, please send a screenshot of this error to "
+        + '<a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a> along with your Worker and Assignment ids '
+        + 'and you will be compensated.<br>'
+        + "<b>Video url: </b>" + vidToPlay.src + "<br>"
+        + "<b>Error code: </b>" + vidToPlay.error.code + "<br>"
+        + "<b>Error message: </b>" + vidToPlay.error.message;
+        console.log("err", vidToPlay.error);
+        showError(bodyHTML, headerText);
+        // TODO skip to next video if it's a decoding error (code 3)
+      }
+
       function playIfReady() {
         console.log("checking if ready", vidToPlay.readyState);
         if (vidToPlay.readyState == 4) {
@@ -545,8 +560,12 @@
           }
           videoStartMsec = (new Date()).getTime() - gameStartMsec;
           vidToPlay.play();
+        } else if (vidToPlay.error) {
+          onError();
         }
       }
+
+      vidToPlay.onerror = onError;
       vidToPlay.oncanplaythrough = playIfReady;
       playIfReady();
     }
@@ -587,10 +606,9 @@
   /**
    * Displays an error message received by an API endpoint to the user.
    */
-  function showError(error, headerText) {
-    console.log(error);
+  function showError(errorText, headerText) {
     $("#error-message").find(".header").text(headerText);
-    $("#error-message").find("p").text(error.responseText);
+    $("#error-message").find("p").html(errorText);
     $("#main-interface").hide();
     $("#instructions").hide();
     $("#experiment").show();
@@ -618,6 +636,11 @@
 
       if (DEBUG.onlyOneVideo) {
         res.videos = res.videos.slice(0, 1);
+      } 
+      if (DEBUG.badVideo) {
+        var badUrl = "blah";
+        var badVideo = {url: badUrl, type: "filler"};
+        res.videos = [badVideo];
       }
 
       // freeze the input data so we can send this back to the server to ensure
@@ -628,7 +651,7 @@
       setupButtons();
     })
     .catch(function(err) {
-      showError(err, headerText="There was a problem loading the game.")
+      showError(err.responseText, headerText="There was a problem loading the game.")
     });
   });
 
