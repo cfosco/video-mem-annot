@@ -566,8 +566,8 @@
           skipOnError(vidToPlay.error.code);
         } else {
           var headerText = "Network Error";
-          var bodyHTML = "The video could not be loaded."
-            + " This is probably due to a problem with your Internet connection."
+          var bodyHTML = "<b>Don't refresh the page!</b>."
+            + " The video could not be loaded, probably due to a problem with your connection."
             + " The game will automatically resume when the problem is resolved."
             + " If you are able to access other websites but the game is still broken,"
             + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
