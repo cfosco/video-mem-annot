@@ -502,34 +502,34 @@
       videoContainer.appendChild(video);
       videoElements.push(video);
 
-      video.ontimeupdate = function () {
-        if (video.currentTime >= CLIP_DURATION) {
-          // check for missed repeat
-          handleCheck(false, false);
-          // remove active video
-          video.ontimeupdate = function () { }; // sometimes it gets called again
-          video.remove();
-          // play next video
-          videoElements.shift();
+      video.onended = function () {
+        console.log("onended");
+        // check for missed repeat
+        handleCheck(false, false);
+        // remove active video
+        video.onendedntimeupdate = function () { }; // sometimes it gets called again
+        video.remove();
+        // play next video
+        videoElements.shift();
 
-          if (videoElements.length > 0) {
-            //const vidToPlay = videoElements[0];
-            playWhenReady(videoElements[0]);
+        if (videoElements.length > 0) {
+          //const vidToPlay = videoElements[0];
+          playWhenReady(videoElements[0]);
 
-            //videoElements[0].play();
-            // queue up another video
-            if (counter < transcripts.length) {
-              newVideo(transcripts[counter], types[counter]);
-            }
-            // update progress bar
-            $progressBar.progress("set progress", counter - NUM_LOAD_AHEAD);
-            // update state
-            counter += 1;
-            checked = false;
-          } else {
-            submitData();
+          //videoElements[0].play();
+          // queue up another video
+          if (counter < transcripts.length) {
+            newVideo(transcripts[counter], types[counter]);
           }
+          // update progress bar
+          $progressBar.progress("set progress", counter - NUM_LOAD_AHEAD);
+          // update state
+          counter += 1;
+          checked = false;
+        } else {
+          submitData();
         }
+        //}
       }
     }
 
@@ -557,7 +557,13 @@
             gameStartMsec = (new Date()).getTime();
           }
           videoStartMsec = (new Date()).getTime() - gameStartMsec;
-          vidToPlay.play();
+          vidToPlay.play()
+          .catch(function(err) {
+            console.log("could not play back");
+            console.log("err: ", err);
+            var headerText = "There was an error playing this video.";
+            showError("", headerText);
+          });
         } else if (vidToPlay.error) {
           onError();
         } else {
