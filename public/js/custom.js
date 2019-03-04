@@ -134,6 +134,7 @@
     var JUMP_ON_WRONG = false;
     var NUM_LOAD_AHEAD = 4;
     var MAX_SKIPS_IN_ROW = 3;
+    var VID_CHANGE_LAG_MSEC = 200;
 
     // get DOM references
     var $progressBar = $("#progress-bar > .ui.progress");
@@ -441,8 +442,8 @@
     /**
      * @return {boolean} whether or not the current video is a repeat
      */
-    function isRepeat() {
-      var curVidType = videoElements[0].dataset.vidType;
+    function isRepeat(vid) {
+      var curVidType = vid.dataset.vidType;
       return (
         curVidType === VID_TYPES.VIG_REPEAT)
         || (curVidType === VID_TYPES.TARGET_REPEAT
@@ -461,17 +462,23 @@
     function handleCheck(response, showFeedback) {
       if (checked) return;
 
+      var clickedVid = videoElements[0];
       responses.push({
         response,
         startMsec: videoStartMsec,
         durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec)
       });
-      var right = isRepeat() === response;
+      var right = isRepeat(clickedVid) === response;
       checked = true;
 
       if (showFeedback) {
         if ((right && JUMP_ON_RIGHT) || (!right && JUMP_ON_WRONG)) {
-          playNextVideo();
+          setTimeout(function() {
+            // only advance if the video has not already advanced (avoid a double-skip)
+            if (videoElements[0].src == clickedVid.src) {
+              playNextVideo();
+            }
+          }, VID_CHANGE_LAG_MSEC);
         }
 
         if (PLAY_SOUND) {
