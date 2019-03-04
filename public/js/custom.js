@@ -511,6 +511,7 @@
       // play next video
       videoElements.shift();
       console.log(videoElements.length)
+      window.focus()
       if (videoElements.length > 0) {
         // queue up another video
         if (counter < transcripts.length) {
@@ -603,7 +604,7 @@
         } else if (vidToPlay.error) {
           onError();
         } else {
-          // show loading 
+          // show loading
           $("#vid-loading-dimmer").addClass('active').removeClass('disabled');
         }
       }
@@ -684,7 +685,7 @@
 
       if (DEBUG.onlyOneVideo) {
         res.videos = res.videos.slice(0, 1);
-      } 
+      }
       if (DEBUG.badVideo) {
         var badUrl = "blah";
         var badVideo = {url: badUrl, type: "filler"};
