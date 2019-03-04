@@ -12,7 +12,7 @@
     }
   });
 
-  // populated from query
+  // populated from query string
   var assignmentId;
   var workerId;
   var hitId;
@@ -21,6 +21,9 @@
   // populated from server
   var inputData;
   var levelID;
+
+  // populated on submit data to our server
+  var payload;
 
   // Debug settings
   var DEBUG = {
@@ -62,7 +65,34 @@
   function startTask() {
     $('#experiment').show();
     $('#instructions').css('display', 'none');
-    showTask(inputData); // from custom.js
+    $.post({
+      "url": "api/start/",
+      "data": {
+        workerID: workerId,
+        hitID: hitId,
+        assignmentID: assignmentId
+      }
+    }).done(function (res) {
+
+      if (DEBUG.onlyOneVideo) {
+        res.videos = res.videos.slice(0, 1);
+      }
+      if (DEBUG.badVideo) {
+        var badUrl = "blah";
+        var badVideo = {url: badUrl, type: "filler"};
+        res.videos = [badVideo];
+      }
+
+      // freeze the input data so we can send this back to the server to ensure
+      // that the data was not corrupted
+      inputData = Object.freeze(res);
+      levelID = res.levelID;
+      //$('.level-num').html(res.level);
+      showTask(inputData);
+    })
+    .catch(function(err) {
+      showError(err.responseText, headerText="There was a problem loading the game.")
+    });
   }
 
   /**
@@ -82,8 +112,11 @@
 
     // MTurk ONLY accepts submits via form elements
     var form = $('#submit-form');
+    var feedback = $(".feedback textarea").val();
     addHiddenField(form, 'assignmentId', assignmentId);
     addHiddenField(form, 'workerId', workerId);
+    addHiddenField(form, 'results', JSON.stringify(payload));
+    addHiddenField(form, 'feedback', feedback);
     $('#submit-form').attr('action', submitUrl);
     $('#submit-form').attr('method', 'POST');
     $('#submit-form').submit();
@@ -128,6 +161,7 @@
     var JUMP_ON_WRONG = false;
     var NUM_LOAD_AHEAD = 4;
     var MAX_SKIPS_IN_ROW = 3;
+    var VID_CHANGE_LAG_MSEC = 200;
 
     // get DOM references
     var $progressBar = $("#progress-bar > .ui.progress");
@@ -375,7 +409,7 @@
         data.numLives = 2;
         showResultsPage(data)
       } else {
-        var payload = {
+        payload = {
           workerID: workerId,
           levelID: levelID,
           responses: responses,
@@ -435,8 +469,8 @@
     /**
      * @return {boolean} whether or not the current video is a repeat
      */
-    function isRepeat() {
-      var curVidType = videoElements[0].dataset.vidType;
+    function isRepeat(vid) {
+      var curVidType = vid.dataset.vidType;
       return (
         curVidType === VID_TYPES.VIG_REPEAT)
         || (curVidType === VID_TYPES.TARGET_REPEAT
@@ -455,17 +489,23 @@
     function handleCheck(response, showFeedback) {
       if (checked) return;
 
+      var clickedVid = videoElements[0];
       responses.push({
         response,
         startMsec: videoStartMsec,
         durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec)
       });
-      var right = isRepeat() === response;
+      var right = isRepeat(clickedVid) === response;
       checked = true;
 
       if (showFeedback) {
         if ((right && JUMP_ON_RIGHT) || (!right && JUMP_ON_WRONG)) {
-          playNextVideo();
+          setTimeout(function() {
+            // only advance if the video has not already advanced (avoid a double-skip)
+            if (videoElements[0].src == clickedVid.src) {
+              playNextVideo();
+            }
+          }, VID_CHANGE_LAG_MSEC);
         }
 
         if (PLAY_SOUND) {
@@ -674,34 +714,8 @@
       return;
     }
     // get videos and start game
-    $.post({
-      "url": "api/start/",
-      "data": {
-        workerID: workerId,
-        hitID: hitId,
-        assignmentID: assignmentId
-      }
-    }).done(function (res) {
+    setupButtons();
 
-      if (DEBUG.onlyOneVideo) {
-        res.videos = res.videos.slice(0, 1);
-      }
-      if (DEBUG.badVideo) {
-        var badUrl = "blah";
-        var badVideo = {url: badUrl, type: "filler"};
-        res.videos = [badVideo];
-      }
-
-      // freeze the input data so we can send this back to the server to ensure
-      // that the data was not corrupted
-      inputData = Object.freeze(res);
-      levelID = res.levelID;
-      $('.level-num').html(res.level);
-      setupButtons();
-    })
-    .catch(function(err) {
-      showError(err.responseText, headerText="There was a problem loading the game.")
-    });
   });
 
 })();
