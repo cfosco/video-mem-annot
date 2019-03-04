@@ -85,9 +85,11 @@
 
     // MTurk ONLY accepts submits via form elements
     var form = $('#submit-form');
+    var feedback = $(".feedback textarea").val();
     addHiddenField(form, 'assignmentId', assignmentId);
     addHiddenField(form, 'workerId', workerId);
     addHiddenField(form, 'results', JSON.stringify(payload));
+    addHiddenField(form, 'feedback', feedback);
     $('#submit-form').attr('action', submitUrl);
     $('#submit-form').attr('method', 'POST');
     $('#submit-form').submit();
