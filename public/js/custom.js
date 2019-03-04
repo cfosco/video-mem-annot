@@ -87,7 +87,7 @@
     var form = $('#submit-form');
     addHiddenField(form, 'assignmentId', assignmentId);
     addHiddenField(form, 'workerId', workerId);
-    addHiddenField(form, 'results', payload);
+    addHiddenField(form, 'results', JSON.stringify(payload));
     $('#submit-form').attr('action', submitUrl);
     $('#submit-form').attr('method', 'POST');
     $('#submit-form').submit();
