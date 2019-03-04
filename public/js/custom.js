@@ -65,7 +65,34 @@
   function startTask() {
     $('#experiment').show();
     $('#instructions').css('display', 'none');
-    showTask(inputData); // from custom.js
+    $.post({
+      "url": "api/start/",
+      "data": {
+        workerID: workerId,
+        hitID: hitId,
+        assignmentID: assignmentId
+      }
+    }).done(function (res) {
+
+      if (DEBUG.onlyOneVideo) {
+        res.videos = res.videos.slice(0, 1);
+      } 
+      if (DEBUG.badVideo) {
+        var badUrl = "blah";
+        var badVideo = {url: badUrl, type: "filler"};
+        res.videos = [badVideo];
+      }
+
+      // freeze the input data so we can send this back to the server to ensure
+      // that the data was not corrupted
+      inputData = Object.freeze(res);
+      levelID = res.levelID;
+      //$('.level-num').html(res.level);
+      showTask(inputData);
+    })
+    .catch(function(err) {
+      showError(err.responseText, headerText="There was a problem loading the game.")
+    });
   }
 
   /**
@@ -686,34 +713,8 @@
       return;
     }
     // get videos and start game
-    $.post({
-      "url": "api/start/",
-      "data": {
-        workerID: workerId,
-        hitID: hitId,
-        assignmentID: assignmentId
-      }
-    }).done(function (res) {
-
-      if (DEBUG.onlyOneVideo) {
-        res.videos = res.videos.slice(0, 1);
-      } 
-      if (DEBUG.badVideo) {
-        var badUrl = "blah";
-        var badVideo = {url: badUrl, type: "filler"};
-        res.videos = [badVideo];
-      }
-
-      // freeze the input data so we can send this back to the server to ensure
-      // that the data was not corrupted
-      inputData = Object.freeze(res);
-      levelID = res.levelID;
-      $('.level-num').html(res.level);
-      setupButtons();
-    })
-    .catch(function(err) {
-      showError(err.responseText, headerText="There was a problem loading the game.")
-    });
+    setupButtons();
+    
   });
 
 })();
