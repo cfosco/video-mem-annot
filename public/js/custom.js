@@ -12,7 +12,7 @@
     }
   });
 
-  // populated from query
+  // populated from query string
   var assignmentId;
   var workerId;
   var hitId;
@@ -21,6 +21,9 @@
   // populated from server
   var inputData;
   var levelID;
+
+  // populated on submit data to our server
+  var payload;
 
   // Debug settings
   var DEBUG = {
@@ -84,6 +87,7 @@
     var form = $('#submit-form');
     addHiddenField(form, 'assignmentId', assignmentId);
     addHiddenField(form, 'workerId', workerId);
+    addHiddenField(form, 'results', payload);
     $('#submit-form').attr('action', submitUrl);
     $('#submit-form').attr('method', 'POST');
     $('#submit-form').submit();
@@ -375,7 +379,7 @@
         data.numLives = 2;
         showResultsPage(data)
       } else {
-        var payload = {
+        payload = {
           workerID: workerId,
           levelID: levelID,
           responses: responses,
