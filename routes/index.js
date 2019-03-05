@@ -9,6 +9,7 @@ const {
     InvalidResultsError
 } = require('../database/dbops');
 const { getSeqTemplate } = require('../utils/sequence');
+const { writeUILog } = require('../utils/log.js');
 
 const router = express.Router();
 
@@ -50,6 +51,16 @@ router.post('/end', (req, res) => {
     .catch((err) => {
         respondToError(err, res);
     });
+});
+
+router.post('/log', (req, res) => {
+    // append to the log file
+    try {
+        writeUILog(req.body.message);
+        res.status(200).send();
+    } catch (err) {
+        respondToError(err, res);
+    }
 });
 
 module.exports = router;
