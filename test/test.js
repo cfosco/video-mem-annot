@@ -1,6 +1,7 @@
 const request = require('supertest');
-const app = require('../app');
 const debug = require('debug')('memento:server');
+const assert = require('assert');
+const app = require('../app');
 const config = require('../config');
 const { pool, initDB } = require('../database/database');
 const { getSeqTemplate } = require('../utils/sequence');
@@ -14,7 +15,6 @@ const {
     InvalidResultsError,
     getUserInfo
 } = require('../database/dbops');
-const assert = require('assert');
 // helper functions for use in tests
 
 function calcAnswers(videos, correct) {

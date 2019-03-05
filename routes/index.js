@@ -1,5 +1,6 @@
 const express = require('express');
 const debug = require('debug')('memento:server');
+
 const {
   getUserInfo,
   getVideos,
