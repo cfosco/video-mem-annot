@@ -46,7 +46,7 @@ router.get('/users/:id', (req, res) => {
 });
 
 router.post('/start', (req, res) => {
-  getVideos(req.body, getSeqTemplate())
+  getVideos(req.body, getSeqTemplate(process.env.USE_SHORT_SEQUENCE === 'true'))
     .then(body => res.send(body))
     .catch((err) => {
       respondToError(err, res);

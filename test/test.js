@@ -13,7 +13,8 @@ const {
     UnauthenticatedError,
     OutOfVidsError,
     InvalidResultsError,
-    getUserInfo
+    getUserInfo,
+    fixLabelCounts
 } = require('../database/dbops');
 // helper functions for use in tests
 
@@ -76,8 +77,8 @@ function createMockPresentations(n_pres, fail_vig, fail_targets, fail_others) {
 }
 
 
-async function getVidsAndMakeAnswers(user, correct=true) {
-    const template = getSeqTemplate();
+async function getVidsAndMakeAnswers(user, correct=true, shortSeq=false) {
+    const template = getSeqTemplate(shortSeq);
     const inputs = await getVideos({workerID: user}, template);
     const {videos, level} = inputs;
     const answers = calcAnswers(videos, correct);
@@ -964,4 +965,73 @@ describe('Test video prioritization', () => {
         
         done();
     }, 10000);
+});
+
+describe('Test update label counts', () => {
+  beforeEach(async (done) => {
+    await wipeDB(populateVideos=false);
+    done();
+  }, 10000);
+
+  afterEach(async (done) => {
+      await wipeDB(populateVideos=true);
+      done();
+  }, 10000);
+
+  test('Should reset all label counts to zero when there are no presentations', async (done) => {
+    for (let i = 0; i < 5; i += 1) {
+      await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, i]);
+    }
+    await fixLabelCounts();
+    const labelCounts = await pool.query('SELECT labels FROM videos;');
+    labelCounts.forEach(({ labels }) => expect(labels).toBe(0));
+    done();
+  });
+
+  // the short sequence contains five videos:
+  // one target (duplicated), one vigilance (dup.), and one filler (not dup.)
+
+  test('Should set correct label counts when a game is completed', async (done) => {
+    for (let i = 0; i < 3; i += 1) {
+      await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, 5]);
+    }
+    const username = "testFixLabelCountsCompletedGame";
+    const { answers, inputs } = await getVidsAndMakeAnswers(username, true, true);
+    await saveResponses(username, inputs.levelID, answers, inputs);
+    await fixLabelCounts();
+    const labelCounts = await pool.query('SELECT labels FROM videos;');
+    expect(labelCounts.filter(({ labels }) => labels === 0)).toHaveLength(2);
+    expect(labelCounts.filter(({ labels }) => labels === 1)).toHaveLength(1);
+    done();
+  });
+
+  test('Should set correct label counts when a game is pending', async (done) => {
+    for (let i = 0; i < 3; i += 1) {
+      await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, 5]);
+    }
+    const username = "testFixLabelCountsPendingGame";
+    await getVidsAndMakeAnswers(username, true, true);
+    await fixLabelCounts();
+    const labelCounts = await pool.query('SELECT labels FROM videos;');
+    expect(labelCounts.filter(({ labels }) => labels === 0)).toHaveLength(2);
+    expect(labelCounts.filter(({ labels }) => labels === 1)).toHaveLength(1);
+    done();
+  });
+
+  test('Should set correct label counts when a game is expired', async (done) => {
+    const orig = config.maxLevelTimeSec;
+    config.maxLevelTimeSec = 0;
+
+    for (let i = 0; i < 3; i += 1) {
+      await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, 5]);
+    }
+    const username = "testFixLabelCountsPendingGame";
+    await getVidsAndMakeAnswers(username, true, true);
+    await fixLabelCounts();
+    const labelCounts = await pool.query('SELECT labels FROM videos;');
+    expect(labelCounts.filter(({ labels }) => labels === 0)).toHaveLength(3);
+
+    config.maxLevelTimeSec = orig;
+    done();
+  });
 });

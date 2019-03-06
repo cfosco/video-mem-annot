@@ -15,7 +15,6 @@ const VID_TYPES = {
 }
 
 const N_LEVELS_PER_NEW_LIFE = 50;
-const MAX_LEVEL_TIME_SEC = 1 * 60 * 60; // 1 hour
 
 const didPassLevel = function (overallScore, vigilanceScore, falsePositiveRate) {
   return overallScore > .7 && vigilanceScore > .7 && falsePositiveRate < .7;
@@ -89,9 +88,17 @@ async function getNextLevelNum(userID) {
   return levels[0].levelsCount + 1;
 }
 
-// used by fixLabelCounts below
-const durHMS = secToHMS(MAX_LEVEL_TIME_SEC);
-const labelCountsQuery = `SELECT videos.id, count(videos.id) as real_labels
+/**
+ * We increment label counts as we create levels
+ *   because label counts are used as priorities
+ * However sometimes levels never get completed
+ *   so label counts end up larger than they should be
+ * This sets all label counts to a number reflecting only
+ *   completed and pending (within the time limit) levels
+ */
+async function fixLabelCounts() {
+  const durHMS = secToHMS(config.maxLevelTimeSec);
+  const labelCountsQuery = `SELECT videos.id, count(T.id_video) as real_labels
 FROM videos
 LEFT JOIN (
     SELECT presentations.id_video
@@ -103,23 +110,14 @@ LEFT JOIN (
     ) AND presentations.targeted = 1 AND presentations.duplicate = 1
 ) as T
 ON videos.id = T.id_video
-GROUP BY videos.id;`
+GROUP BY videos.id;`;
 
-/**
- * We increment label counts as we create levels
- *   because label counts are used as priorities
- * However sometimes levels never get completed
- *   so label counts end up larger than they should be
- * This sets all label counts to a number reflecting only
- *   completed and pending (within the time limit) levels
- */
-async function fixLabelCounts() {
   await withinTX(async (connection) => {
     const result = await connection.query(labelCountsQuery);
-    const countIDPairs = result.map((row) => [row.real_labels, row.id]);
     const targetUpdatesQuery = 'UPDATE videos SET labels = ? WHERE id = ?;'
-      .repeat(countIDPairs.length);
-    await connection.query(targetUpdatesQuery, countIDPairs);
+      .repeat(result.length);
+    const args = [].concat(...result.map((row) => [row.real_labels, row.id]));
+    await connection.query(targetUpdatesQuery, args);
   });
 }
 
@@ -340,7 +338,7 @@ async function saveResponses(
       throw new InvalidResultsError('Responses were submitted too quickly to complete the level');
     }
   }
-  if (timeDiffMsec > MAX_LEVEL_TIME_SEC * 1000) {
+  if (timeDiffMsec > config.maxLevelTimeSec * 1000) {
     throw new InvalidResultsError('Responses were submitted too slowly to complete the level');
   }
 
@@ -446,6 +444,5 @@ module.exports = {
   UnauthenticatedError,
   OutOfVidsError,
   InvalidResultsError,
-  fixLabelCounts,
-  MAX_LEVEL_TIME_SEC
+  fixLabelCounts
 };
