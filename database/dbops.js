@@ -5,48 +5,48 @@ const assert = require('assert');
 const config = require('../config');
 
 const VID_TYPES = {
-    TARGET_REPEAT: "target_repeat",
-    VIG_REPEAT: "vig_repeat",
-    VIG: "vig",
-    TARGET: "target",
-    FILLER: "filler",
+  TARGET_REPEAT: "target_repeat",
+  VIG_REPEAT: "vig_repeat",
+  VIG: "vig",
+  TARGET: "target",
+  FILLER: "filler",
 }
 
 const N_LEVELS_PER_NEW_LIFE = 50;
 
-const didPassLevel = function(overallScore, vigilanceScore, falsePositiveRate) {
-   return overallScore > .7 && vigilanceScore > .7 && falsePositiveRate < .7;
+const didPassLevel = function (overallScore, vigilanceScore, falsePositiveRate) {
+  return overallScore > .7 && vigilanceScore > .7 && falsePositiveRate < .7;
 }
 
 // Errors to be used in the API
 class BlockedError extends Error {
-    constructor(username) {
-        const message = "User " + username + " has been blocked."
-        super(message);
-        this.name = "BlockedError";
-    }
+  constructor(username) {
+    const message = "User " + username + " has been blocked."
+    super(message);
+    this.name = "BlockedError";
+  }
 }
 
 class UnauthenticatedError extends Error {
-    constructor(message) {
-        super(message);
-        this.name = "UnauthenticatedError";
-    }
+  constructor(message) {
+    super(message);
+    this.name = "UnauthenticatedError";
+  }
 }
 
 class OutOfVidsError extends Error {
-    constructor(username) {
-        const message = "User " + username + " is out of videos.";
-        super(message);
-        this.name = "OutOfVidsError";
-    }
+  constructor(username) {
+    const message = "User " + username + " is out of videos.";
+    super(message);
+    this.name = "OutOfVidsError";
+  }
 }
 
 class InvalidResultsError extends Error {
-    constructor(message="Invalid results") {
-        super(message);
-        this.name = "InvalidResultsError";
-    }
+  constructor(message = "Invalid results") {
+    super(message);
+    this.name = "InvalidResultsError";
+  }
 }
 
 /**
@@ -62,21 +62,60 @@ async function getUser(workerID) {
   let userID;
 
   await withinTX(async (connection) => {
-      const users = await connection.query('SELECT id FROM users WHERE worker_id = ?', workerID);
-      if (users.length === 0) {
-        const result = await connection.query('INSERT INTO users (worker_id) VALUES (?)', workerID);
-        userID = result.insertId;
-      } else {
-        userID = users[0].id;
-      }
+    const users = await connection.query('SELECT id FROM users WHERE worker_id = ?', workerID);
+    if (users.length === 0) {
+      const result = await connection.query('INSERT INTO users (worker_id) VALUES (?)', workerID);
+      userID = result.insertId;
+    } else {
+      userID = users[0].id;
+    }
   });
   return userID;
 }
 
 /**
+ * @param {number} userID 
+ * @return {Promise<number>} next level number (1 = first level)
+ */
+async function getNextLevelNum(userID) {
+  await assertNotBlocked(userID, false);
+  // figure out the level num
+  const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
+  + 'WHERE id_user = ? AND score IS NOT NULL'
+  , userID);
+  return levels[0].levelsCount + 1;
+}
+
+/**
  * @param {string} workerID
- * @param {[number, boolean][]} sequence index, vigilance
- * @return {Promise<string[]>} list of video urls
+ * @return {{ level: number }}
+ */
+async function getUserInfo(workerID) {
+  const userID = await getUser(workerID);
+  const level = await getNextLevelNum(userID);
+  return { level };
+}
+
+/**
+ * @param {number | string} id unique identifier for user
+ * @param {boolean} useWorkerId search on worker_id rather than id
+ * @throws {BlockedError} if blocking is enabled and the user has no lives
+ */
+async function assertNotBlocked(id, useWorkerId) {
+  const searchOn = useWorkerId ? 'worker_id' : 'id';
+  const result = await pool.query(`SELECT * FROM users WHERE ${searchOn} = ?`, id);
+  if (result.length > 0) {
+    const user = result[0];
+    if (user.num_lives < 1 && config.enableBlockUsers) {
+      throw new BlockedError(user.worker_id);
+    }
+  }
+}
+
+/**
+ * @param {{workerId: string, assignmentId: string, hitId: string}} data
+ * @param {[ nTargets: number, nFillers:number, [index: number, type: string][] ]} seqTemplate
+ * @return {Promise<{ level: number, levelID: number, videos: { url: string, type: string}[] }>}
  */
 async function getVideos(data, seqTemplate) {
   const workerID = data.workerID;
@@ -84,19 +123,15 @@ async function getVideos(data, seqTemplate) {
   const [nTargets, nFillers, ordering] = seqTemplate;
   const numVideos = nTargets + nFillers;
 
+  await assertNotBlocked(workerID, true);
   const userID = await getUser(workerID);
-  const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
-  const user = result[0];
-  if (user.num_lives < 1 && config.enableBlockUsers) {
-    throw new BlockedError(user.worker_id);
-  }
 
   // select nTargets least-seen videos user hasn't seen yet
   const targetVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
-      + ' (SELECT id_video FROM levels '
-      + 'JOIN presentations ON levels.id = presentations.id_level '
-      + 'WHERE id_user = ?)'
+    + ' (SELECT id_video FROM levels '
+    + 'JOIN presentations ON levels.id = presentations.id_level '
+    + 'WHERE id_user = ?)'
     + ' ORDER BY labels ASC LIMIT ?',
     [userID, nTargets]
   );
@@ -104,28 +139,28 @@ async function getVideos(data, seqTemplate) {
   // select numVideos vids that user hasn't seen yet randomly
   const randomVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
-      + ' (SELECT id_video FROM levels '
-      + 'JOIN presentations ON levels.id = presentations.id_level '
-      + 'WHERE id_user = ?)'
+    + ' (SELECT id_video FROM levels '
+    + 'JOIN presentations ON levels.id = presentations.id_level '
+    + 'WHERE id_user = ?)'
     + ' ORDER BY RAND() LIMIT ?',
     [userID, numVideos]
   );
 
   // select fillers by taking the first nFillers vids from the set difference
   // targetVids - randomVids
-  const targetsSet = new Set(targetVids.map(({id, uri}) => id));
-  const potentialFillers = randomVids.filter(({id, uri}) => !targetsSet.has(id));
+  const targetsSet = new Set(targetVids.map(({ id, uri }) => id));
+  const potentialFillers = randomVids.filter(({ id, uri }) => !targetsSet.has(id));
 
   if (potentialFillers.length < nFillers || targetVids.length < nTargets) {
-    throw new OutOfVidsError(user.worker_id);
+    throw new OutOfVidsError(workerID);
   }
   const fillerVids = potentialFillers.slice(0, nFillers);
   const vidsToShow = targetVids.concat(fillerVids);
 
   // prepare SQL to insert level
-  var sqlFields = "id_user";
-  var sqlQuestionmarks = "?";
-  var sqlValues = [userID];
+  let sqlFields = "id_user";
+  let sqlQuestionmarks = "?";
+  let sqlValues = [userID];
   if (data.assignmentID) {
     sqlFields += ", assignment_id";
     sqlQuestionmarks += ", ?";
@@ -137,17 +172,12 @@ async function getVideos(data, seqTemplate) {
     sqlValues.push(data.hitID);
   }
 
-  var taskInputs;
+  let taskInputs;
+  const level = await getNextLevelNum(userID);
   await withinTX(async (connection) => {
-    // figure out the level num
-    const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
-      + 'WHERE id_user = ? AND score IS NOT NULL'
-    , userID);
-    const level = levels[0].levelsCount + 1;
-
     // create a level
     const result = await connection.query('INSERT INTO levels '
-        + '(' + sqlFields + ') VALUES (' + sqlQuestionmarks + ')', sqlValues);
+      + '(' + sqlFields + ') VALUES (' + sqlQuestionmarks + ')', sqlValues);
     const levelID = result.insertId;
 
     // compose and hash the client-side inputs to the level
@@ -164,7 +194,7 @@ async function getVideos(data, seqTemplate) {
 
     // insert the hash
     connection.query('UPDATE levels SET inputs_hash = ? WHERE id = ?',
-        [hashVal, levelID]);
+      [hashVal, levelID]);
 
     const presentationInserts = ordering.map(([index, type], position) => {
       const vigilance = type == VID_TYPES.VIG || type == VID_TYPES.VIG_REPEAT;
@@ -193,7 +223,7 @@ async function getVideos(data, seqTemplate) {
     await Promise.all(promises);
   });
 
- return taskInputs;
+  return taskInputs;
 }
 
 /**
@@ -217,36 +247,32 @@ function calcScores(presentations) {
   const numNonDuplicate = presentations.filter(nonDuplicate).length;
 
   falsePositiveRate = numNonDuplicate == 0
-                    ? 0
-                    : presentations.filter(falsePositive).length / numNonDuplicate;
+    ? 0
+    : presentations.filter(falsePositive).length / numNonDuplicate;
   overallScore = numAll == 0
-               ? 1
-               : numRight / numAll;
+    ? 1
+    : numRight / numAll;
   vigilanceScore = numVig == 0
-                 ? 1
-                 : numVigRight / numVig;
+    ? 1
+    : numVigRight / numVig;
 
   passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);
 
-  return {passed, overallScore, vigilanceScore, falsePositiveRate}
+  return { passed, overallScore, vigilanceScore, falsePositiveRate }
 
 }
 
 async function saveResponses(
-    workerID,
-    levelID,
-    responses,
-    levelInputs,
-    reward=config.rewardAmount,
-    levelsPerLife=N_LEVELS_PER_NEW_LIFE,
-    errorOnFastSubmit=config.errorOnFastSubmit) {
+  workerID,
+  levelID,
+  responses,
+  levelInputs,
+  reward = config.rewardAmount,
+  levelsPerLife = N_LEVELS_PER_NEW_LIFE,
+  errorOnFastSubmit = config.errorOnFastSubmit) {
 
+  await assertNotBlocked(workerID, true);
   const userID = await getUser(workerID);
-  const result = await pool.query('SELECT * FROM users WHERE id = ?', userID);
-  const user = result[0];
-  if (user.num_lives < 1 && config.enableBlockUsers) {
-    throw new BlockedError(user.worker_id);
-  }
 
   const levels = await pool.query('SELECT * FROM levels'
     + ' WHERE id = ? AND id_user = ?', [levelID, userID]);
@@ -269,38 +295,38 @@ async function saveResponses(
   // check that the time elapsed has not been too short
   if (errorOnFastSubmit) {
     // set the minTime to about 1s per video, which should be plenty
-    const minTimeMsec = levelLen*1*1000;
+    const minTimeMsec = levelLen * 1 * 1000;
     const startTimeMsec = new Date(levels[0].insert_time).getTime();
     const curTimeMsec = new Date().getTime();
-    const timeDiffMsec = curTimeMsec-startTimeMsec;
+    const timeDiffMsec = curTimeMsec - startTimeMsec;
     if (timeDiffMsec < minTimeMsec) {
-        throw new InvalidResultsError('Responses were submitted too quickly to complete the level');
+      throw new InvalidResultsError('Responses were submitted too quickly to complete the level');
     }
   }
 
   // check that answers have the correct format (roughly)
   // calculate the hash of the inputs
   try {
-      if (config.enforceSameInputs) {
-        const hash = crypto.createHash('sha256');
-        hash.update(JSON.stringify(levelInputs));
-        const hashVal = hash.digest('hex');
-        const savedHashVal = levels[0].inputs_hash;
-        assert(savedHashVal === hashVal, "Inputs hash does not match");
-        assert(responses.length == levelLen, "responses.length does not match the length of the level ");
-      }
-      responses.forEach((elt) => {
-        const { response, startMsec, durationMsec, mediaErrorCode } = elt;
-        assert(
-          (typeof(response) === "boolean" && mediaErrorCode == null)
-          || (response == null && typeof(mediaErrorCode) === "number"),
-          "a valid response should be a boolean with a null/undefined error\n"
-          + "a valid error should be a null response with a numeric error code"
-        );
-        assert(typeof(startMsec) === "number", "start time should be a number");
-        assert(typeof(durationMsec) === "number", "duration should be a number");
-      });
-  } catch(error) {
+    if (config.enforceSameInputs) {
+      const hash = crypto.createHash('sha256');
+      hash.update(JSON.stringify(levelInputs));
+      const hashVal = hash.digest('hex');
+      const savedHashVal = levels[0].inputs_hash;
+      assert(savedHashVal === hashVal, "Inputs hash does not match");
+      assert(responses.length == levelLen, "responses.length does not match the length of the level ");
+    }
+    responses.forEach((elt) => {
+      const { response, startMsec, durationMsec, mediaErrorCode } = elt;
+      assert(
+        (typeof (response) === "boolean" && mediaErrorCode == null)
+        || (response == null && typeof (mediaErrorCode) === "number"),
+        "a valid response should be a boolean with a null/undefined error\n"
+        + "a valid error should be a null response with a numeric error code"
+      );
+      assert(typeof (startMsec) === "number", "start time should be a number");
+      assert(typeof (durationMsec) === "number", "duration should be a number");
+    });
+  } catch (error) {
     debug("Error while checking validity of inputs:", error);
     throw new InvalidResultsError('Invalid responses.');
   }
@@ -323,7 +349,7 @@ async function saveResponses(
     // calcualate level number
     const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
       + 'WHERE id_user = ? AND score IS NOT NULL'
-    , userID);
+      , userID);
     const levelNum = levels[0].levelsCount + 1;
 
     // // calculate score
@@ -331,7 +357,7 @@ async function saveResponses(
       + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
 
 
-    const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
+    const { passed, overallScore, vigilanceScore, falsePositiveRate } = calcScores(presentations);
 
     await connection.query('UPDATE levels SET score = ?, vig_score = ?, false_pos_rate = ?, reward = ? WHERE id = ?', [overallScore, vigilanceScore, falsePositiveRate, reward, levelID]);
 
@@ -341,21 +367,21 @@ async function saveResponses(
 
     numLives = oldLives;
     if (levelNum == 1) {
-        if (passed) {
-            numLives++;
-        } else {
-            numLives--;
-        }
+      if (passed) {
+        numLives++;
+      } else {
+        numLives--;
+      }
     } else {
-        if (levelNum % levelsPerLife == 0) {
-            numLives++;
-        }
-        if (!passed) {
-            numLives--;
-        }
+      if (levelNum % levelsPerLife == 0) {
+        numLives++;
+      }
+      if (!passed) {
+        numLives--;
+      }
     }
     if (numLives != oldLives) {
-        await connection.query('UPDATE users SET num_lives = ? WHERE id = ?', [numLives, userID]);
+      await connection.query('UPDATE users SET num_lives = ? WHERE id = ?', [numLives, userID]);
     }
   });
 
@@ -372,6 +398,7 @@ async function saveResponses(
 }
 
 module.exports = {
+  getUserInfo,
   getVideos,
   saveResponses,
   calcScores,

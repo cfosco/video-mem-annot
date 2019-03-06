@@ -11,7 +11,8 @@ const {
     BlockedError,
     UnauthenticatedError,
     OutOfVidsError,
-    InvalidResultsError
+    InvalidResultsError,
+    getUserInfo
 } = require('../database/dbops');
 const assert = require('assert');
 // helper functions for use in tests
@@ -115,6 +116,15 @@ describe('Test get sequence template', () => {
     // test that the biggest elt in the seq is nTargets + nFillers - 1
     const indices = ordering.map(([i, type]) => i);
     expect(Math.max(...indices)).toBe(nTargets + nFillers - 1);
+  });
+});
+
+describe('Test get user info', () => {
+  test('It should return level 1 on new user', async (done) => {
+    const user = 'getuserinfotest1';
+    const {level} = await getUserInfo(user);
+    expect(level).toBe(1);
+    done();
   });
 });
 
@@ -659,6 +669,19 @@ describe('Test failure on later rounds', () => {
     }, BlockedError);
 
     done();
+  });
+});
+
+describe('Test get user', () => {
+  test('It should return level 1 for new user', (done) => {
+    request(app)
+      .get('/api/users/testgetuser2')
+      .expect(200)
+      .end((err, res) => {
+        const { level } = res.body;
+        expect(level).toBe(1);
+        done();
+      });
   });
 });
 
