@@ -397,6 +397,18 @@ async function saveResponses(
   }
 }
 
+/**
+ * @param {number} levelID 
+ * @param {string} feedback
+ * @return {Promise<void>}
+ */
+async function submitLevel(levelID, taskTimeMsec, feedback) {
+  await pool.query(
+    'UPDATE levels SET duration_msec = ?, feedback = ? WHERE id = ?',
+    [taskTimeMsec, feedback, levelID]
+  );
+}
+
 module.exports = {
   getUserInfo,
   getVideos,
@@ -405,5 +417,6 @@ module.exports = {
   BlockedError,
   UnauthenticatedError,
   OutOfVidsError,
-  InvalidResultsError
+  InvalidResultsError,
+  submitLevel
 };

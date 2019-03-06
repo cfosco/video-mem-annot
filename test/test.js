@@ -12,7 +12,8 @@ const {
     UnauthenticatedError,
     OutOfVidsError,
     InvalidResultsError,
-    getUserInfo
+    getUserInfo,
+    submitLevel
 } = require('../database/dbops');
 const assert = require('assert');
 // helper functions for use in tests
@@ -322,6 +323,47 @@ describe('Test save answers', () => {
     expect(completedLevels[0].score).toEqual(1);
     expect(completedLevels[0].reward).toEqual(.5);
     done();
+  });
+});
+
+describe('Test submit', () => {
+  test('It should set the total time and feedback', async (done) => {
+    const username = 'testSubmit';
+    const { answers, inputs } = await getVidsAndMakeAnswers(username);
+    await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
+    const durationMsec = 10 * 60 * 1000;
+    await submitLevel(inputs.levelID, durationMsec, 'Foo');
+    const { feedback, duration_msec } = (await pool.query(
+      'SELECT feedback, duration_msec FROM levels WHERE id = ?',
+      inputs.levelID
+    ))[0];
+    expect(feedback).toEqual('Foo');
+    expect(duration_msec).toEqual(durationMsec);
+    done();
+  });
+
+  test('It should set the feedback via API', async (done) => {
+    const username = 'testSubmitAPI'
+    const { answers, inputs } = await getVidsAndMakeAnswers(username);
+    await saveResponses(username, inputs.levelID, answers, inputs);
+    const durationMsec = 9 * 60 * 1000;
+    request(app)
+      .post(`/api/submit`)
+      .send({
+        levelID: inputs.levelID,
+        taskTimeMsec: durationMsec,
+        feedback: 'bar'
+      })
+      .expect(200)
+      .end(async () => {
+        const { feedback, duration_msec } = (await pool.query(
+          'SELECT feedback, duration_msec FROM levels WHERE id = ?',
+          inputs.levelID
+        ))[0];
+        expect(feedback).toEqual('bar');
+        expect(duration_msec).toEqual(durationMsec);
+        done();
+      });
   });
 });
 
