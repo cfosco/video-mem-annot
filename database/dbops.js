@@ -1,8 +1,10 @@
 const crypto = require('crypto');
-const { pool, withinTX } = require('./database');
 const debug = require('debug')('memento:server');
 const assert = require('assert');
+
+const { pool, withinTX } = require('./database');
 const config = require('../config');
+const { secToHMS } = require('../utils/utils');
 
 const VID_TYPES = {
   TARGET_REPEAT: "target_repeat",
@@ -84,6 +86,39 @@ async function getNextLevelNum(userID) {
   + 'WHERE id_user = ? AND score IS NOT NULL'
   , userID);
   return levels[0].levelsCount + 1;
+}
+
+/**
+ * We increment label counts as we create levels
+ *   because label counts are used as priorities
+ * However sometimes levels never get completed
+ *   so label counts end up larger than they should be
+ * This sets all label counts to a number reflecting only
+ *   completed and pending (within the time limit) levels
+ */
+async function fixLabelCounts() {
+  const durHMS = secToHMS(config.maxLevelTimeSec);
+  const labelCountsQuery = `SELECT videos.id, count(T.id_video) as real_labels
+FROM videos
+LEFT JOIN (
+    SELECT presentations.id_video
+    FROM levels JOIN presentations
+    ON levels.id = presentations.id_level
+    WHERE (
+        levels.score IS NOT NULL
+    	OR TIMEDIFF(CURRENT_TIMESTAMP, levels.insert_time) < "${durHMS}"
+    ) AND presentations.targeted = 1 AND presentations.duplicate = 1
+) as T
+ON videos.id = T.id_video
+GROUP BY videos.id;`;
+
+  await withinTX(async (connection) => {
+    const result = await connection.query(labelCountsQuery);
+    const targetUpdatesQuery = 'UPDATE videos SET labels = ? WHERE id = ?;'
+      .repeat(result.length);
+    const args = [].concat(...result.map((row) => [row.real_labels, row.id]));
+    await connection.query(targetUpdatesQuery, args);
+  });
 }
 
 /**
@@ -292,16 +327,19 @@ async function saveResponses(
     + 'FROM presentations WHERE id_level = ?', levelID);
   const levelLen = presentations[0].presentationsCount;
 
-  // check that the time elapsed has not been too short
+  // check that the time elapsed has not been too short or long
+  const startTimeMsec = new Date(levels[0].insert_time).getTime();
+  const curTimeMsec = new Date().getTime();
+  const timeDiffMsec = curTimeMsec - startTimeMsec;
   if (errorOnFastSubmit) {
     // set the minTime to about 1s per video, which should be plenty
     const minTimeMsec = levelLen * 1 * 1000;
-    const startTimeMsec = new Date(levels[0].insert_time).getTime();
-    const curTimeMsec = new Date().getTime();
-    const timeDiffMsec = curTimeMsec - startTimeMsec;
     if (timeDiffMsec < minTimeMsec) {
       throw new InvalidResultsError('Responses were submitted too quickly to complete the level');
     }
+  }
+  if (timeDiffMsec > config.maxLevelTimeSec * 1000) {
+    throw new InvalidResultsError('Responses were submitted too slowly to complete the level');
   }
 
   // check that answers have the correct format (roughly)
@@ -405,5 +443,6 @@ module.exports = {
   BlockedError,
   UnauthenticatedError,
   OutOfVidsError,
-  InvalidResultsError
+  InvalidResultsError,
+  fixLabelCounts
 };

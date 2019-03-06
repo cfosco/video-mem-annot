@@ -7,10 +7,8 @@ function randIntInRange(low, high) {
     return Math.floor(r*(high-low) + low);
 }
 
-function getSeqTemplate() {
-    const dirName = process.env.USE_SHORT_SEQUENCE == 'true'
-        ? 'short_level_templates'
-        : 'level_templates';
+function getSeqTemplate(useShortSequence) {
+    const dirName = useShortSequence ? 'short_level_templates' : 'level_templates';
     try {
         const dirPath = path.join(__dirname, '..', 'task_data', dirName);
         const files = fs.readdirSync(dirPath).filter((f) => f.endsWith('.json'));
