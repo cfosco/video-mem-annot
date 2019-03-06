@@ -2,8 +2,9 @@
 A general-purpose template for Amazon Mechanical Turk tasks.
 
 ### Getting Data
-Run `./dump_db.sh databasename username` (it will then ask for the mysql
-password) to download tables and save them to tab-separated values files.
+I recommend using phpMyAdmin which allows you to export the database(s) of your choosing to the format of your choosing (csv, json, etc.). You will need to install phpMyAdmin locally, as CSAIL has not deployed the software and has asked us not to do so.
+
+Alternatively, tun `./dump_db.sh databasename username` (it will then ask for the mysql password) to download tables and save them to tab-separated values files.
 
 ### Development
 The first time you clone: `npm install`
