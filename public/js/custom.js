@@ -64,7 +64,7 @@
    */
   function startTask() {
     $('#experiment').show();
-    $('#instructions').css('display', 'none');
+    $('#instructions').hide();
     $.post({
       "url": "api/start/",
       "data": {
@@ -597,6 +597,7 @@
     function playWhenReady(vidToPlay) {
       function onError() {
         console.log('video error', vidToPlay.error);
+        logError(vidToPlay.error, "playWhenReady");
         if (
           (
             vidToPlay.error.code === MediaError.MEDIA_ERR_DECODE
@@ -636,6 +637,7 @@
           videoStartMsec = (new Date()).getTime() - gameStartMsec;
           vidToPlay.play()
           .catch(function(err) {
+            logError(err);
             console.log("could not play back");
             console.log("err: ", err);
             var headerText = "There was an error playing this video.";
@@ -652,6 +654,18 @@
       vidToPlay.onerror = onError;
       vidToPlay.oncanplaythrough = playIfReady;
       playIfReady();
+    }
+
+    function logError(error, whereTag) {
+      var curVid = videoElements[0].src;
+      var message = workerId + " " + levelID + " " + whereTag + " " + curVid + " " + JSON.stringify(error, ["code", "message", "responseText"]);
+      console.log("logging error message:", message);
+      $.post({
+        "url": "api/log/",
+        "data": {
+          message: message
+        }
+      });
     }
 
     // HANDLE KEYPRESS (Spacebar)
@@ -708,14 +722,20 @@
     getURLParams();
 
     if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE" || !workerId) {
-      // have not accepted the hit, we should NOT load a level for them
       $('#start-button').hide();
       $("#accept-hit-message").show();
+      $('.level-num').parent().hide();
       return;
+    } else {
+      $.get({
+        "url": "api/users/" + workerId
+      }).done(function (res) {
+        $('.level-num').text(res.level);
+      }).catch(function(err) {
+        showError(err.responseText, headerText="There was a problem loading the game.")
+      });
+      setupButtons();
     }
-    // get videos and start game
-    setupButtons();
-
   });
 
 })();
