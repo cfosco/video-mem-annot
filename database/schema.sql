@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS levels (
   vig_score DECIMAL(10, 9),
   false_pos_rate DECIMAL(10, 9),
   reward DECIMAL(4,2),
-  insert_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  insert_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  duration_msec INT,
+  feedback TEXT
 );
 
 CREATE TABLE IF NOT EXISTS presentations (

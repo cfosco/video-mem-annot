@@ -8,7 +8,8 @@ const {
   BlockedError,
   UnauthenticatedError,
   OutOfVidsError,
-  InvalidResultsError
+  InvalidResultsError,
+  submitLevel
 } = require('../database/dbops');
 const { getSeqTemplate } = require('../utils/sequence');
 const { writeUILog } = require('../utils/log.js');
@@ -61,6 +62,18 @@ router.post('/end', (req, res) => {
     req.body.inputs
   )
     .then(body => res.send(body))
+    .catch((err) => {
+      respondToError(err, res);
+    });
+});
+
+router.post('/submit', (req, res) => {
+  submitLevel(
+    req.body.levelID,
+    req.body.taskTimeMsec,
+    req.body.feedback
+  )
+    .then(() => res.send())
     .catch((err) => {
       respondToError(err, res);
     });

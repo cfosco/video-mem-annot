@@ -113,6 +113,19 @@
     // MTurk ONLY accepts submits via form elements
     var form = $('#submit-form');
     var feedback = $(".feedback textarea").val();
+
+    // send the feedback to the server
+    $.post({
+      url: 'api/submit',
+      data: JSON.stringify({
+        levelID,
+        taskTimeMsec: (new Date()).getTime() - taskStartMsec,
+        feedback
+      }),
+      contentType: 'application/json; charset=utf-8',
+      dataType: 'json'
+    }); // if it fails, oh well
+
     addHiddenField(form, 'assignmentId', assignmentId);
     addHiddenField(form, 'workerId', workerId);
     addHiddenField(form, 'results', JSON.stringify(payload));
@@ -477,6 +490,7 @@
       );
     }
 
+    var taskStartMsec;
     var gameStartMsec;
     var videoStartMsec;
     var numSkipsInRow = 0;
@@ -719,6 +733,7 @@
   }
 
   $(document).ready(function () {
+    taskStartMsec = (new Date()).getTime();
     getURLParams();
 
     if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE" || !workerId) {
