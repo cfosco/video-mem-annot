@@ -17,7 +17,7 @@ const VID_TYPES = {
 const N_LEVELS_PER_NEW_LIFE = 50;
 
 const didPassLevel = function (overallScore, vigilanceScore, falsePositiveRate) {
-  return overallScore > .7 && vigilanceScore > .7 && falsePositiveRate < .7;
+  return overallScore > .7 && vigilanceScore > .8 && falsePositiveRate < .5;
 }
 
 // Errors to be used in the API
@@ -76,7 +76,7 @@ async function getUser(workerID) {
 }
 
 /**
- * @param {number} userID 
+ * @param {number} userID
  * @return {Promise<number>} next level number (1 = first level)
  */
 async function getNextLevelNum(userID) {
@@ -436,7 +436,7 @@ async function saveResponses(
 }
 
 /**
- * @param {number} levelID 
+ * @param {number} levelID
  * @param {string} feedback
  * @return {Promise<void>}
  */
