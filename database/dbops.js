@@ -314,7 +314,6 @@ async function saveResponses(
   if (levels.length === 0) {
     throw new InvalidResultsError('Invalid level id');
   }
-  //levelID = levels[0].id;
 
   // check that answers have not already been given
   const pastResponses = await pool.query('SELECT response FROM presentations'
@@ -323,17 +322,23 @@ async function saveResponses(
     throw new InvalidResultsError('This level has already been submitted');
   }
 
+  // number of presentations in the level
   const presentations = await pool.query('SELECT COUNT(*) AS presentationsCount '
     + 'FROM presentations WHERE id_level = ?', levelID);
   const levelLen = presentations[0].presentationsCount;
 
-  // check that the time elapsed has not been too short or long
-  const startTimeMsec = new Date(levels[0].insert_time).getTime();
-  const curTimeMsec = new Date().getTime();
-  const timeDiffMsec = curTimeMsec - startTimeMsec;
+  // number of true / false (not null/ undefined) responses
+  // (!= rather than !== is deliberate here)
+  const numBoolResponses = responses.filter(({ response }) => response != null).length;
+
+  // get time elapsed from db (not node server to avoid timezone issues)
+  const { nowTS } = (await pool.query('SELECT CURRENT_TIMESTAMP as nowTS;'))[0];
+  const timeDiffMsec = new Date(nowTS).getTime() - new Date(levels[0].insert_time).getTime();
+
+  // check that the submission is neither too fast nor too slow
   if (errorOnFastSubmit) {
     // set the minTime to about 1s per video, which should be plenty
-    const minTimeMsec = levelLen * 1 * 1000;
+    const minTimeMsec = numBoolResponses * 1 * 1000;
     if (timeDiffMsec < minTimeMsec) {
       throw new InvalidResultsError('Responses were submitted too quickly to complete the level');
     }
@@ -345,16 +350,23 @@ async function saveResponses(
   // check that answers have the correct format (roughly)
   // calculate the hash of the inputs
   try {
+    // require them to send back the inputs
     if (config.enforceSameInputs) {
       const hash = crypto.createHash('sha256');
       hash.update(JSON.stringify(levelInputs));
       const hashVal = hash.digest('hex');
       const savedHashVal = levels[0].inputs_hash;
       assert(savedHashVal === hashVal, "Inputs hash does not match");
-      assert(responses.length == levelLen, "responses.length does not match the length of the level ");
     }
+
+    // check the number of responses (less is ok since they can fail early)
+    assert(responses.length <= levelLen, "Too many responses given");
+
+    // check that the individual responses have valid forms
     responses.forEach((elt) => {
       const { response, startMsec, durationMsec, mediaErrorCode } = elt;
+      // you give a response or an error, not both
+      // == is deliberate since null or undefined is fine
       assert(
         (typeof (response) === "boolean" && mediaErrorCode == null)
         || (response == null && typeof (mediaErrorCode) === "number"),
@@ -369,40 +381,32 @@ async function saveResponses(
     throw new InvalidResultsError('Invalid responses.');
   }
 
-  // var numLives;
-  // var overallScore;
-  // var vigilanceScore;
-  // var passed;
-
+  // save the responses
   await withinTX(async (connection) => {
     // update db with answers
     const values = [];
     responses.forEach(({ response, startMsec, durationMsec, mediaErrorCode }, position) => {
-      values.push.apply(values, [response, startMsec, durationMsec, mediaErrorCode || null, position, levelID]); // append all
+      values.push.apply(values, [response, startMsec, durationMsec, mediaErrorCode, position, levelID]); // append all
     });
     const query = 'UPDATE presentations SET response = ?, start_msec = ?, duration_msec = ?, media_error_code = ? WHERE position = ? AND id_level = ?; '
       .repeat(responses.length);
     await connection.query(query, values);
 
-    // calcualate level number
+    // calcualate level number (before setting the score since that changes it)
     const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
       + 'WHERE id_user = ? AND score IS NOT NULL'
       , userID);
     const levelNum = levels[0].levelsCount + 1;
 
-    // // calculate score
+    // calculate and set score
     const presentations = await connection.query('SELECT response, duplicate, vigilance'
       + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
-
-
     const { passed, overallScore, vigilanceScore, falsePositiveRate } = calcScores(presentations);
-
     await connection.query('UPDATE levels SET score = ?, vig_score = ?, false_pos_rate = ?, reward = ? WHERE id = ?', [overallScore, vigilanceScore, falsePositiveRate, reward, levelID]);
 
     // update num lives
     const livesQuery = await connection.query('SELECT num_lives FROM users WHERE id = ?', userID);
     const oldLives = livesQuery[0].num_lives;
-
     numLives = oldLives;
     if (levelNum == 1) {
       if (passed) {

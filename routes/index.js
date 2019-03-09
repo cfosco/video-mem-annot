@@ -35,6 +35,9 @@ function respondToError(err, res) {
   }
 }
 
+/**
+ * Get the level that a user is on and whether or not they are blocked
+ */
 router.get('/users/:id', (req, res) => {
   getUserInfo(req.params.id)
     .then(body => {
@@ -46,6 +49,11 @@ router.get('/users/:id', (req, res) => {
     });
 });
 
+/**
+ * Request a new level
+ * Gets a sequence of video urls + type
+ * This invalidates any pending level the user has
+ */
 router.post('/start', (req, res) => {
   getVideos(req.body, getSeqTemplate(process.env.USE_SHORT_SEQUENCE === 'true'))
     .then(body => res.send(body))
@@ -54,6 +62,12 @@ router.post('/start', (req, res) => {
     });
 });
 
+/**
+ * Send all of the responses for a level
+ * Get whether or not you passed,
+ *    scores and earnings on all past levels,
+ *    and number of lives left
+ */
 router.post('/end', (req, res) => {
   saveResponses(
     req.body.workerID,
@@ -67,6 +81,9 @@ router.post('/end', (req, res) => {
     });
 });
 
+/**
+ * Save total task time and feedback right before HIT is submitted
+ */
 router.post('/submit', (req, res) => {
   submitLevel(
     req.body.levelID,
@@ -79,8 +96,10 @@ router.post('/submit', (req, res) => {
     });
 });
 
+/**
+ * Writes a message to a log file
+ */
 router.post('/log', (req, res) => {
-  // append to the log file
   try {
     writeUILog(req.body.message);
     res.status(200).send();

@@ -38,7 +38,7 @@
   function getURLParams() {
     // this is an advanced feature but it is polyfilled
     var urlParams = new URLSearchParams(window.location.search);
-    let submitDomain = urlParams.get('turkSubmitTo') || 'https://www.mturk.com/';
+    var submitDomain = urlParams.get('turkSubmitTo') || 'https://www.mturk.com/';
     if (!submitDomain.endsWith('/')) {
       submitDomain += '/';
     }
@@ -168,7 +168,6 @@
     // ui configuration options
     var SHOW_PLAY_PAUSE = false;
     var SHOW_PROGRESS = true;
-    var PLAY_SOUND = false;
     var SHOW_FLASH = true;
     var JUMP_ON_RIGHT = true;
     var JUMP_ON_WRONG = false;
@@ -450,21 +449,28 @@
 
       $("#score-verdict").text(data.passed ? "You passed!" : "You failed");
       $("#score-text").text("Level " + data.completedLevels.length + " Score:")
-      var livesMessage;
+      var livesMessage = "";
       var iconElts = "";
+      // early fail
+      if (responses.length < transcripts.length) {
+        livesMessage += "The game ended early because you didn't seem to be paying attention.<br>"
+        var $submitButton = $('#submit-button');
+        $submitButton.text('Cannot Submit');
+        $submitButton.prop('disabled', true);
+        $submitButton.off(); // remove click handler
+        $(".feedback-container").hide(); // won't be able to submit feedback
+      }
       if (data.numLives <= 0) {
-        // put a sad face emoji
-        livesMessage = "You have no lives left. You can no longer play the game."
-        iconElts += '<i class="frown outline icon"></i>';
-
+        livesMessage += "You have no lives left. You can no longer play the game."
+        iconElts += '<i class="frown outline icon"></i>'; // put a sad face emoji
       } else {
         var livesWord = data.numLives > 1 ? "lives" : "life";
         livesMessage = "You have " + data.numLives + " " + livesWord + " left";
-        for (let i = 0; i < data.numLives; i++) {
+        for (var i = 0; i < data.numLives; i++) {
           iconElts += '<i class="heart icon"></i>';
         }
       }
-      $("#lives-message").text(livesMessage);
+      $("#lives-message").html(livesMessage);
       $("#lives-left").append(iconElts);
 
       var pastScores = data.completedLevels.map(function(d) {
@@ -495,6 +501,18 @@
     var videoStartMsec;
     var numSkipsInRow = 0;
 
+    // number right and number seen for each vid type
+    var fracs = {};
+    Object.keys(VID_TYPES).forEach(function(key) {
+      fracs[VID_TYPES[key]] = [0, 0];
+    });
+    function updateFrac(frac, right) {
+      frac[1] += 1;
+      if (right) {
+        frac[0] += 1;
+      }
+    }
+
     /**
      * Call at the end of the video or when the user presses spacebar
      * @param {boolean} response user says is or isn't repeat
@@ -511,6 +529,7 @@
       });
       var right = isRepeat(clickedVid) === response;
       checked = true;
+      updateFrac(fracs[clickedVid.dataset.vidType], right);
 
       if (showFeedback) {
         if ((right && JUMP_ON_RIGHT) || (!right && JUMP_ON_WRONG)) {
@@ -520,13 +539,6 @@
               playNextVideo();
             }
           }, VID_CHANGE_LAG_MSEC);
-        }
-
-        if (PLAY_SOUND) {
-          (right
-            ? new Audio('wav/correct.wav')
-            : new Audio('wav/wrong.wav')
-          ).play();
         }
 
         if (SHOW_FLASH) {
@@ -540,6 +552,34 @@
         }
       }
       numSkipsInRow = 0;
+    }
+
+    /**
+     * Early fail condition
+     * After two vigilance repeats, if you missed both
+     * or false positived on both initial presentations
+     * you are out!
+     */
+    function earlyFail() {
+      var vigFrac = fracs[VID_TYPES.VIG];
+      var vigRepeatFrac = fracs[VID_TYPES.VIG_REPEAT];
+      if (vigRepeatFrac[1] === 2) {
+        return (
+          vigRepeatFrac[0] / vigRepeatFrac[1] < .5
+          || vigFrac[0] / vigFrac[1] < .5
+        );
+      }
+      var gameTimeMsec = (new Date()).getTime() - gameStartMsec;
+      if (gameTimeMsec > 30 * 1000 && gameTimeMsec < 2 * 60 * 1000) {
+        var nonDupFrac = [VID_TYPES.FILLER, VID_TYPES.TARGET, VID_TYPES.VIG]
+          .reduce(function(frac, key) {
+            return [frac[0] + fracs[key][0], frac[1] + fracs[key][1]];
+          }, [0, 0]);
+        return (
+          vigRepeatFrac[0] / vigRepeatFrac[1] < .5
+          || nonDupFrac[0] / nonDupFrac[1] < .5
+        );
+      }
     }
 
     /**
@@ -562,9 +602,15 @@
       // remove current video
       videoElements[0].onended = function () { }; // sometimes it gets called again
       videoElements[0].remove();
+
+      if (earlyFail()) {
+        // showError("<p>You seem to not be paying attention, so the game has been stopped. You may refresh the page to play again.</p>");
+        submitData();
+        return;
+      }
+
       // play next video
       videoElements.shift();
-      console.log(videoElements.length)
       window.focus()
       if (videoElements.length > 0) {
         // queue up another video
@@ -640,7 +686,6 @@
       }
 
       function playIfReady() {
-        console.log("checking if ready", vidToPlay.readyState);
         if (vidToPlay.readyState == 4) {
           hideError();
           $("#vid-loading-dimmer").addClass('disabled').removeClass('active');
@@ -650,13 +695,13 @@
           }
           videoStartMsec = (new Date()).getTime() - gameStartMsec;
           vidToPlay.play()
-          .catch(function(err) {
-            logError(err);
-            console.log("could not play back");
-            console.log("err: ", err);
-            var headerText = "There was an error playing this video.";
-            showError("", headerText);
-          });
+            .catch(function(err) {
+              logError(err);
+              console.log("could not play back");
+              console.log("err: ", err);
+              var headerText = "There was an error playing this video.";
+              showError("", headerText);
+            });
         } else if (vidToPlay.error) {
           onError();
         } else {
@@ -705,7 +750,7 @@
     $progressBar.progress({ total: transcripts.length });
 
     // preload videos and start game
-    const numVidsToLoad = Math.min(1 + NUM_LOAD_AHEAD, taskData.videos.length);
+    var numVidsToLoad = Math.min(1 + NUM_LOAD_AHEAD, taskData.videos.length);
     for (counter; counter < numVidsToLoad; counter += 1) {
       newVideo(transcripts[counter], types[counter]);
     }

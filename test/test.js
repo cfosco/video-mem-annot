@@ -325,6 +325,21 @@ describe('Test save answers', () => {
     expect(completedLevels[0].reward).toEqual(.5);
     done();
   });
+
+  test('It should let you submit early but fail you', async (done) => {
+    const username = 'testEarlyFail';
+    let { answers, inputs } = await getVidsAndMakeAnswers(username);
+    answers = answers.slice(10);
+    const {
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
+    expect(numLives).toEqual(0);
+    expect(passed).toBe(false);
+    expect(completedLevels).toHaveLength(1);
+    done();
+  });
 });
 
 describe('Test submit', () => {
