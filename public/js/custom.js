@@ -175,12 +175,12 @@
     var MAX_SKIPS_IN_ROW = 3;
     var VID_CHANGE_LAG_MSEC = 200;
 
-    // settings for vigilance checks 
+    // settings for vigilance checks
     var REQ_ACCURACIES = {
       PREFIX_VIG: .5,
       PREFIX_NON_REPEAT: .5,
-      FIRST_QUARTER_VIG: .5,
-      FIRST_QUARTER_NON_REPEAT: .5
+      FIRST_QUARTER_VIG: .6,
+      FIRST_QUARTER_NON_REPEAT: .65
     }
     // time range in which you can fail early, in seconds
     FAIL_EARLY_ELIGIBLE = [30, 120];
