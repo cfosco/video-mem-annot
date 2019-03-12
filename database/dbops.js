@@ -153,7 +153,7 @@ async function assertNotBlocked(id, useWorkerId) {
  * @return {Promise<{ level: number, levelID: number, videos: { url: string, type: string}[] }>}
  */
 async function getVideos(data, seqTemplate) {
-  const workerID = data.workerID;
+  const { workerID, browser, browserVersion, os, deviceType } = data;
 
   const [nTargets, nFillers, ordering] = seqTemplate;
   const numVideos = nTargets + nFillers;
@@ -193,9 +193,9 @@ async function getVideos(data, seqTemplate) {
   const vidsToShow = targetVids.concat(fillerVids);
 
   // prepare SQL to insert level
-  let sqlFields = "id_user";
-  let sqlQuestionmarks = "?";
-  let sqlValues = [userID];
+  let sqlFields = "id_user, browser, browser_version, os, device_type";
+  let sqlQuestionmarks = "?, ?, ?, ?, ?";
+  let sqlValues = [userID, browser, browserVersion, os, deviceType];
   if (data.assignmentID) {
     sqlFields += ", assignment_id";
     sqlQuestionmarks += ", ?";

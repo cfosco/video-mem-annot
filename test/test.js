@@ -19,6 +19,13 @@ const {
 } = require('../database/dbops');
 // helper functions for use in tests
 
+const userAgentData = {
+  browser: 'jest',
+  browserVersion: '1',
+  os: 'jest',
+  deviceType: 'jest'
+};
+
 function calcAnswers(videos, correct) {
   const urls = new Set();
   const answers = videos.map(vid => {
@@ -80,8 +87,11 @@ function createMockPresentations(n_pres, fail_vig, fail_targets, fail_others) {
 
 async function getVidsAndMakeAnswers(user, correct=true, shortSeq=false) {
     const template = getSeqTemplate(shortSeq);
-    const inputs = await getVideos({workerID: user}, template);
-    const {videos, level} = inputs;
+    const inputs = await getVideos({
+      workerID: user,
+      ...userAgentData
+    }, template);
+    const { videos } = inputs;
     const answers = calcAnswers(videos, correct);
     return { answers, inputs };
 }
@@ -135,7 +145,7 @@ describe('Test get videos', () => {
     const user = 'test1';
     const template = getSeqTemplate();
     const [nTargets, nFillers, ordering] = template;
-    const {videos, level} = await getVideos({workerID: user}, template);
+    const {videos, level} = await getVideos({workerID: user, ...userAgentData}, template);
 
     expect(videos.length).toBe(ordering.length);
     expect(level).toBe(1);
@@ -155,7 +165,7 @@ describe('Test get videos', () => {
     const user = 'test2';
     const urls = new Set();
     for (let i = 1; i < 10; i += 1) {
-      const {videos, level} = await getVideos({workerID: user}, getSeqTemplate());
+      const {videos, level} = (await getVidsAndMakeAnswers(user)).inputs;
       expect(level).toBe(1);
       const sequenceURLs = new Set(videos.map((elt) => elt.url));
       sequenceURLs.forEach(url => {
@@ -173,8 +183,9 @@ describe('Test get videos', () => {
     const inputData = {
         workerID: user,
         assignmentID,
-        hitID
-    }
+        hitID,
+        ...userAgentData
+    };
     const inputs = await getVideos(inputData, getSeqTemplate());
     // query the db and make sure stuff was saved
     const dbResult = await pool.query("SELECT * FROM levels WHERE id = ?", inputs.levelID);
@@ -188,7 +199,7 @@ describe('Test increasing levels', () => {
   test('Levels should increase', async (done) => {
     const username = 'testIncLevel';
     for (let i = 1; i <=3; i++) {
-      const inputs = await getVideos({workerID: username}, getSeqTemplate());
+      const inputs = await getVideos({workerID: username, ...userAgentData}, getSeqTemplate());
       const {videos, level, levelID} = inputs;
       expect(level).toBe(i);
       const answers = calcAnswers(videos, correct=true);
@@ -202,7 +213,7 @@ describe('Test dbops with invalid user', () => {
     const badUser = "";
     test('getVideos should throw error', async (done) => {
         await checkThrowsError(async() => {
-            await getVideos({workerID: badUser}, getSeqTemplate());
+            await getVideos({workerID: badUser, ...userAgentData}, getSeqTemplate());
         }, UnauthenticatedError);
         done();
     });
@@ -276,7 +287,7 @@ describe('Test errorOnFastSubmit', () => {
     test('Answers submitted after a reasonable delay should be accepted', async (done) => {
         const user = "accSlowSubmit";
         const shortTemplate = [0, 1, [[0, "filler"]]];
-        const inputs = await getVideos({workerID: user}, shortTemplate);
+        const inputs = await getVideos({workerID: user, ...userAgentData}, shortTemplate);
         const {videos, level, levelID} = inputs;
         const correctResponses = calcAnswers(videos, true);
         // wait a couple secs to submit
@@ -501,7 +512,7 @@ describe('Test that accuracy metrics are saved in the db', () => {
             [3, "vig"], 
             [3, "vig_repeat"]
         ]];
-        const inputs = await getVideos({workerID: username}, shortTemplate);
+        const inputs = await getVideos({workerID: username, ...userAgentData}, shortTemplate);
         const boolAnswers = [true, false, true, false, true, false, false]
         const answers = boolAnswers.map((response, i) => {
           return {
@@ -698,7 +709,7 @@ describe('Test failure on first round', () => {
     expect(passed).toBe(false);
 
     await checkThrowsError(async () => {
-        await getVideos({workerID: username}, getSeqTemplate());
+        await getVideos({workerID: username, ...userAgentData}, getSeqTemplate());
     }, BlockedError);
 
     await checkThrowsError(async() => {
@@ -739,7 +750,7 @@ describe('Test failure on later rounds', () => {
     }
     expect(finalLives).toEqual(0);
     await checkThrowsError(async () => {
-        await getVideos({workerID: username}, getSeqTemplate());
+        await getVideos({workerID: username, ...userAgentData}, getSeqTemplate());
     }, BlockedError);
 
     await checkThrowsError(async() => {
@@ -981,7 +992,7 @@ describe('Test video prioritization', () => {
           order.push([i, "filler"]);
       }
       const template = [nTarget, nFiller, order];
-      const {videos} = await getVideos({workerID: username}, template);
+      const {videos} = await getVideos({workerID: username, ...userAgentData}, template);
 
       // check that the first several are all high-pri videos
       for (let i = 0; i < nTarget; i++) {
@@ -1000,7 +1011,7 @@ describe('Test video prioritization', () => {
           order.push([i, "filler"]);
       }
       const template = [0, nVids, order];
-      const { videos } = await getVideos({workerID: username}, template);
+      const { videos } = await getVideos({workerID: username, ...userAgentData}, template);
       // check that there is a mix of vid types
       var nActualHigh = 0;
       var nActualLow = 0;
@@ -1028,7 +1039,7 @@ describe('Test video prioritization', () => {
             const seen = new Set();
             for (let i = 0; i < expectedNumLevels; i++) {
                 debug("User " + user + " i " + i);
-                const { videos } = await getVideos({workerID: user}, template);
+                const { videos } = await getVideos({workerID: user, ...userAgentData}, template);
                 videos.map(({ url }) => {
                     expect(seen.has(url)).toBe(false);
                     seen.add(url);
@@ -1036,7 +1047,7 @@ describe('Test video prioritization', () => {
             }
             debug("User " + user + " last one");
             await checkThrowsError(async() => {
-                const vids = await getVideos({workerID: user}, template);
+                const vids = await getVideos({workerID: user, ...userAgentData}, template);
             }, OutOfVidsError);
         };
         

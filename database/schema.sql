@@ -23,7 +23,11 @@ CREATE TABLE IF NOT EXISTS levels (
   reward DECIMAL(4,2),
   insert_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   duration_msec INT,
-  feedback TEXT
+  feedback TEXT,
+  browser VARCHAR(32) NOT NULL,
+  browser_version VARCHAR(32) NOT NULL,
+  os VARCHAR(32) NOT NULL,
+  device_type VARCHAR(8) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS presentations (
