@@ -91,7 +91,7 @@
       showTask(inputData);
     })
     .catch(function(err) {
-      showError(err.responseText, headerText="There was a problem loading the game.")
+      showError(err.responseText, "There was a problem loading the game.")
     });
   }
 
@@ -444,7 +444,7 @@
           dataType: 'json'
         }).done(showResultsPage)
         .catch(function(err) {
-          showError(err.responseText, headerText="Your answers could not be submitted.")
+          showError(err.responseText, "Your answers could not be submitted.", err)
         });
       }
     }
@@ -614,7 +614,6 @@
       videoElements[0].remove();
 
       if (earlyFail()) {
-        // showError("<p>You seem to not be paying attention, so the game has been stopped. You may refresh the page to play again.</p>");
         submitData();
         return;
       }
@@ -667,7 +666,6 @@
     function playWhenReady(vidToPlay) {
       function onError() {
         console.log('video error', vidToPlay.error);
-        logError(vidToPlay.error, "playWhenReady");
         if (
           (
             vidToPlay.error.code === MediaError.MEDIA_ERR_DECODE
@@ -691,7 +689,7 @@
             + "<br><b>Video url: </b>" + vidToPlay.src
             + "<br><b>Error code: </b>" + vidToPlay.error.code
             + "<br><b>Error message: </b>" + vidToPlay.error.message;
-          showError(bodyHTML, headerText);
+          showError(bodyHTML, headerText, vidToPlay.error);
           setTimeout(() => {
             vidToPlay.load();
             playIfReady();
@@ -710,11 +708,24 @@
           videoStartMsec = (new Date()).getTime() - gameStartMsec;
           vidToPlay.play()
             .catch(function(err) {
-              logError(err);
-              console.log("could not play back");
-              console.log("err: ", err);
-              var headerText = "There was an error playing this video.";
-              showError("", headerText);
+              if (numSkipsInRow < MAX_SKIPS_IN_ROW) {
+                skipOnError({
+                  code: err.code,
+                  text: err.message,
+                  where: 'playIfReady -> video.play'
+                });
+              } else {
+                var headerText = "Unkown Error";
+                var bodyHTML = "There was an error playing this video."
+                  + ' If you just started the game, please try a different browser. Otherwise,'
+                  + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
+                  + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
+                  + " "
+                  + "<br><b>Video url: </b>" + vidToPlay.src
+                  + "<br><b>Error code: </b>" + err.code
+                  + "<br><b>Error message: </b>" + err.message;
+                showError(bodyHTML, headerText, err);
+              }
             });
         } else if (vidToPlay.error) {
           onError();
@@ -727,18 +738,6 @@
       vidToPlay.onerror = onError;
       vidToPlay.oncanplaythrough = playIfReady;
       playIfReady();
-    }
-
-    function logError(error, whereTag) {
-      var curVid = videoElements[0].src;
-      var message = workerId + " " + levelID + " " + whereTag + " " + curVid + " " + JSON.stringify(error, ["code", "message", "responseText"]);
-      console.log("logging error message:", message);
-      $.post({
-        "url": "api/log/",
-        "data": {
-          message: message
-        }
-      });
     }
 
     // HANDLE KEYPRESS (Spacebar)
@@ -776,14 +775,29 @@
 
   /**
    * Displays an error message received by an API endpoint to the user.
+   * If you give err, it logs the err as JSON along with the user's progress
    */
-  function showError(errorText, headerText) {
+  function showError(errorText, headerText, err) {
     $("#error-message").find(".header").text(headerText);
     $("#error-message").find("p").html(errorText);
     $("#main-interface").hide();
     $("#instructions").hide();
     $("#experiment").show();
     $("#error-message").show();
+    if (err) {
+      $.post({
+        "url": "api/log/",
+        "data": {
+          message: JSON.stringify({
+            workerID: workerId,
+            levelID: levelID,
+            responses: responses,
+            inputs: taskData,
+            err
+          })
+        }
+      });
+    }
   }
 
   function hideError() {
@@ -806,7 +820,7 @@
       }).done(function (res) {
         $('.level-num').text(res.level);
       }).catch(function(err) {
-        showError(err.responseText, headerText="There was a problem loading the game.")
+        showError(err.responseText, "There was a problem loading the game.")
       });
       setupButtons();
     }
