@@ -153,7 +153,7 @@ async function assertNotBlocked(id, useWorkerId) {
  * @return {Promise<{ level: number, levelID: number, videos: { url: string, type: string}[] }>}
  */
 async function getVideos(data, seqTemplate) {
-  const workerID = data.workerID;
+  const { workerID, browser, browserVersion, os, deviceType } = data;
 
   const [nTargets, nFillers, ordering] = seqTemplate;
   const numVideos = nTargets + nFillers;
@@ -193,9 +193,9 @@ async function getVideos(data, seqTemplate) {
   const vidsToShow = targetVids.concat(fillerVids);
 
   // prepare SQL to insert level
-  let sqlFields = "id_user";
-  let sqlQuestionmarks = "?";
-  let sqlValues = [userID];
+  let sqlFields = "id_user, browser, browser_version, os, device_type";
+  let sqlQuestionmarks = "?, ?, ?, ?, ?";
+  let sqlValues = [userID, browser, browserVersion, os, deviceType];
   if (data.assignmentID) {
     sqlFields += ", assignment_id";
     sqlQuestionmarks += ", ?";
@@ -298,13 +298,11 @@ function calcScores(presentations) {
 }
 
 async function saveResponses(
-  workerID,
-  levelID,
-  responses,
-  levelInputs,
+  data,
   reward = config.rewardAmount,
   levelsPerLife = N_LEVELS_PER_NEW_LIFE,
   errorOnFastSubmit = config.errorOnFastSubmit) {
+  const { workerID, levelID, responses, levelInputs, errorEnd } = data;
 
   await assertNotBlocked(workerID, true);
   const userID = await getUser(workerID);
@@ -336,7 +334,7 @@ async function saveResponses(
   const timeDiffMsec = new Date(nowTS).getTime() - new Date(levels[0].insert_time).getTime();
 
   // check that the submission is neither too fast nor too slow
-  if (errorOnFastSubmit) {
+  if (errorOnFastSubmit && !errorEnd) {
     // set the minTime to about 1s per video, which should be plenty
     const minTimeMsec = numBoolResponses * 1 * 1000;
     if (timeDiffMsec < minTimeMsec) {
@@ -364,12 +362,19 @@ async function saveResponses(
 
     // check that the individual responses have valid forms
     responses.forEach((elt) => {
-      const { response, startMsec, durationMsec, mediaErrorCode } = elt;
+      const { response, startMsec, durationMsec, error } = elt;
       // you give a response or an error, not both
       // == is deliberate since null or undefined is fine
       assert(
-        (typeof (response) === "boolean" && mediaErrorCode == null)
-        || (response == null && typeof (mediaErrorCode) === "number"),
+        (typeof (response) === "boolean" && error == null)
+        || (
+          response == null
+          && error
+          && typeof (error) === "object"
+          && typeof (error.code) === "number"
+          && typeof (error.text) === "string"
+          && typeof (error.where) === "string"
+        ),
         "a valid response should be a boolean with a null/undefined error\n"
         + "a valid error should be a null response with a numeric error code"
       );
@@ -381,16 +386,45 @@ async function saveResponses(
     throw new InvalidResultsError('Invalid responses.');
   }
 
+  let overallScore;
+  let vigilanceScore;
+  let numLives;
+  let passed;
+
   // save the responses
   await withinTX(async (connection) => {
     // update db with answers
     const values = [];
-    responses.forEach(({ response, startMsec, durationMsec, mediaErrorCode }, position) => {
-      values.push.apply(values, [response, startMsec, durationMsec, mediaErrorCode, position, levelID]); // append all
+    responses.forEach(({ response, startMsec, durationMsec }, position) => {
+      values.push.apply(values, [response, startMsec, durationMsec, position, levelID]); // append all
     });
-    const query = 'UPDATE presentations SET response = ?, start_msec = ?, duration_msec = ?, media_error_code = ? WHERE position = ? AND id_level = ?; '
+    const query = 'UPDATE presentations SET response = ?, start_msec = ?, duration_msec = ? WHERE position = ? AND id_level = ?; '
       .repeat(responses.length);
     await connection.query(query, values);
+
+    // update db with errors
+    const getIDsArgs = [];
+    let errorInserts = [];
+    responses.forEach(({ error }, i) => {
+      if (error) {
+        getIDsArgs.push(i);
+        getIDsArgs.push(levelID);
+        errorInserts.push([error.code, error.text, error.where]);
+      }
+    });
+    if (errorInserts.length > 0) {
+      const getIDsQuery = 'SELECT id FROM presentations WHERE position = ? AND id_level = ?; '
+        .repeat(errorInserts.length);
+      const ids = (await connection.query(getIDsQuery, getIDsArgs)).map(row => row.id);
+      await connection.query('INSERT INTO errors '
+        + ' (id_presentation, e_code, e_text, e_where)'
+        + ' VALUES ?',
+        [errorInserts.map((arr, i) => [ids[i], ...arr])]
+      );
+    }
+
+    // if their game ended due to an error, don't mark as completed
+    if (errorEnd) return;
 
     // calcualate level number (before setting the score since that changes it)
     const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
@@ -401,7 +435,11 @@ async function saveResponses(
     // calculate and set score
     const presentations = await connection.query('SELECT response, duplicate, vigilance'
       + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
-    const { passed, overallScore, vigilanceScore, falsePositiveRate } = calcScores(presentations);
+    const calc = calcScores(presentations);
+    passed = calc.passed;
+    overallScore = calc.overallScore;
+    vigilanceScore = calc.vigilanceScore;
+    falsePositiveRate = calc.falsePositiveRate;
     await connection.query('UPDATE levels SET score = ?, vig_score = ?, false_pos_rate = ?, reward = ? WHERE id = ?', [overallScore, vigilanceScore, falsePositiveRate, reward, levelID]);
 
     // update num lives

@@ -23,7 +23,11 @@ CREATE TABLE IF NOT EXISTS levels (
   reward DECIMAL(4,2),
   insert_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   duration_msec INT,
-  feedback TEXT
+  feedback TEXT,
+  browser VARCHAR(32) NOT NULL,
+  browser_version VARCHAR(32) NOT NULL,
+  os VARCHAR(32) NOT NULL,
+  device_type VARCHAR(8) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS presentations (
@@ -38,8 +42,14 @@ CREATE TABLE IF NOT EXISTS presentations (
   duplicate BOOLEAN NOT NULL,
   response BOOLEAN,
   start_msec INT,
-  duration_msec INT,
-  media_error_code TINYINT
+  duration_msec INT
 );
 
-
+CREATE TABLE IF NOT EXISTS errors (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  id_presentation INT NOT NULL,
+  FOREIGN KEY(id_presentation) REFERENCES presentations(id),
+  e_code INT,
+  e_text TEXT,
+  e_where TEXT
+)

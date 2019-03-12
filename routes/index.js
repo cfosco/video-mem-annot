@@ -55,7 +55,21 @@ router.get('/users/:id', (req, res) => {
  * This invalidates any pending level the user has
  */
 router.post('/start', (req, res) => {
-  getVideos(req.body, getSeqTemplate(process.env.USE_SHORT_SEQUENCE === 'true'))
+  const deviceType =
+    (req.useragent.isMobile && 'mobile')
+    || (req.useragent.isTablet && 'tablet')
+    || (req.useragent.isDesktop && 'desktop')
+    || 'unknown';
+  const args = {
+    workerID: req.body.workerID,
+    assignmentID: req.body.assignmentID,
+    hitID: req.body.hitID,
+    os: req.useragent.os,
+    browser: req.useragent.browser,
+    browserVersion: req.useragent.version,
+    deviceType,
+  };
+  getVideos(args, getSeqTemplate(process.env.USE_SHORT_SEQUENCE === 'true'))
     .then(body => res.send(body))
     .catch((err) => {
       respondToError(err, res);
@@ -69,12 +83,14 @@ router.post('/start', (req, res) => {
  *    and number of lives left
  */
 router.post('/end', (req, res) => {
-  saveResponses(
-    req.body.workerID,
-    req.body.levelID,
-    req.body.responses,
-    req.body.inputs
-  )
+  const args = {
+    workerID: req.body.workerID,
+    levelID: req.body.levelID,
+    responses: req.body.responses,
+    levelInputs: req.body.inputs,
+    errorEnd: req.body.errorEnd
+  };
+  saveResponses(args)
     .then(body => res.send(body))
     .catch((err) => {
       respondToError(err, res);
