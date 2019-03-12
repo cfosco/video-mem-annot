@@ -175,6 +175,16 @@
     var MAX_SKIPS_IN_ROW = 3;
     var VID_CHANGE_LAG_MSEC = 200;
 
+    // settings for vigilance checks 
+    var REQ_ACCURACIES = {
+      PREFIX_VIG: .5,
+      PREFIX_NON_REPEAT: .5,
+      FIRST_QUARTER_VIG: .5,
+      FIRST_QUARTER_NON_REPEAT: .5
+    }
+    // time range in which you can fail early, in seconds
+    FAIL_EARLY_ELIGIBLE = [30, 120];
+
     // get DOM references
     var $progressBar = $("#progress-bar > .ui.progress");
     var $mainInterface = $('#main-interface');
@@ -565,19 +575,19 @@
       var vigRepeatFrac = fracs[VID_TYPES.VIG_REPEAT];
       if (vigRepeatFrac[1] === 2) {
         return (
-          vigRepeatFrac[0] / vigRepeatFrac[1] < .5
-          || vigFrac[0] / vigFrac[1] < .5
+          vigRepeatFrac[0] / vigRepeatFrac[1] < REQ_ACCURACIES.PREFIX_VIG
+          || vigFrac[0] / vigFrac[1] < REQ_ACCURACIES.PREFIX_NON_REPEAT
         );
       }
       var gameTimeMsec = (new Date()).getTime() - gameStartMsec;
-      if (gameTimeMsec > 30 * 1000 && gameTimeMsec < 2 * 60 * 1000) {
+      if (gameTimeMsec > FAIL_EARLY_ELIGIBLE[0] * 1000 && gameTimeMsec < FAIL_EARLY_ELIGIBLE[1] * 1000) {
         var nonDupFrac = [VID_TYPES.FILLER, VID_TYPES.TARGET, VID_TYPES.VIG]
           .reduce(function(frac, key) {
             return [frac[0] + fracs[key][0], frac[1] + fracs[key][1]];
           }, [0, 0]);
         return (
-          vigRepeatFrac[0] / vigRepeatFrac[1] < .5
-          || nonDupFrac[0] / nonDupFrac[1] < .5
+          vigRepeatFrac[0] / vigRepeatFrac[1] < REQ_ACCURACIES.FIRST_QUARTER_VIG
+          || nonDupFrac[0] / nonDupFrac[1] < REQ_ACCURACIES.FIRST_QUARTER_NON_REPEAT
         );
       }
     }
