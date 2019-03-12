@@ -180,7 +180,7 @@
       PREFIX_VIG: .5,
       PREFIX_NON_REPEAT: .5,
       FIRST_QUARTER_VIG: .6,
-      FIRST_QUARTER_NON_REPEAT: .65
+      FIRST_QUARTER_NON_REPEAT: .55
     }
     // time range in which you can fail early, in seconds
     FAIL_EARLY_ELIGIBLE = [30, 120];
