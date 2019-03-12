@@ -97,7 +97,7 @@ async function checkThrowsError(asyncFunc, errorClass) {
 }
 
 async function wipeDB (populateVideos) {
-  for (let table of ['presentations', 'levels', 'users', 'videos']) {
+  for (let table of ['errors', 'presentations', 'levels', 'users', 'videos']) {
     await pool.query('DROP TABLE ' + table)
       .catch((e) => {
         debug("error dropping table", e);
@@ -337,6 +337,26 @@ describe('Test save answers', () => {
     } = await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
     expect(numLives).toEqual(0);
     expect(passed).toBe(false);
+    expect(completedLevels).toHaveLength(1);
+    done();
+  });
+
+  test('It should let you submit with errors', async (done) => {
+    const username = 'testSubmitError';
+    const { answers, inputs } = await getVidsAndMakeAnswers(username);
+    answers[0].response = null;
+    answers[0].error = {
+      code: 1,
+      text: 'foo',
+      where: 'myFn'
+    };
+    const {
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
+    expect(numLives).toEqual(2);
+    expect(passed).toBe(true);
     expect(completedLevels).toHaveLength(1);
     done();
   });

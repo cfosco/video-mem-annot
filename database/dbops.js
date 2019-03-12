@@ -364,12 +364,19 @@ async function saveResponses(
 
     // check that the individual responses have valid forms
     responses.forEach((elt) => {
-      const { response, startMsec, durationMsec, mediaErrorCode } = elt;
+      const { response, startMsec, durationMsec, error } = elt;
       // you give a response or an error, not both
       // == is deliberate since null or undefined is fine
       assert(
-        (typeof (response) === "boolean" && mediaErrorCode == null)
-        || (response == null && typeof (mediaErrorCode) === "number"),
+        (typeof (response) === "boolean" && error == null)
+        || (
+          response == null
+          && error
+          && typeof (error) === "object"
+          && typeof (error.code) === "number"
+          && typeof (error.text) === "string"
+          && typeof (error.where) === "string"
+        ),
         "a valid response should be a boolean with a null/undefined error\n"
         + "a valid error should be a null response with a numeric error code"
       );
@@ -385,12 +392,33 @@ async function saveResponses(
   await withinTX(async (connection) => {
     // update db with answers
     const values = [];
-    responses.forEach(({ response, startMsec, durationMsec, mediaErrorCode }, position) => {
-      values.push.apply(values, [response, startMsec, durationMsec, mediaErrorCode, position, levelID]); // append all
+    responses.forEach(({ response, startMsec, durationMsec }, position) => {
+      values.push.apply(values, [response, startMsec, durationMsec, position, levelID]); // append all
     });
-    const query = 'UPDATE presentations SET response = ?, start_msec = ?, duration_msec = ?, media_error_code = ? WHERE position = ? AND id_level = ?; '
+    const query = 'UPDATE presentations SET response = ?, start_msec = ?, duration_msec = ? WHERE position = ? AND id_level = ?; '
       .repeat(responses.length);
     await connection.query(query, values);
+
+    // update db with errors
+    const getIDsArgs = [];
+    let errorInserts = [];
+    responses.forEach(({ error }, i) => {
+      if (error) {
+        getIDsArgs.push(i);
+        getIDsArgs.push(levelID);
+        errorInserts.push([error.code, error.text, error.where]);
+      }
+    });
+    if (errorInserts.length > 0) {
+      const getIDsQuery = 'SELECT id FROM presentations WHERE position = ? AND id_level = ?; '
+        .repeat(errorInserts.length);
+      const ids = (await connection.query(getIDsQuery, getIDsArgs)).map(row => row.id);
+      await connection.query('INSERT INTO errors '
+        + ' (id_presentation, e_code, e_text, e_where)'
+        + ' VALUES ?',
+        [errorInserts.map((arr, i) => [ids[i], ...arr])]
+      );
+    }
 
     // calcualate level number (before setting the score since that changes it)
     const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '

@@ -593,15 +593,15 @@
     }
 
     /**
-     * Call when a video throws a mediaError to log the occurrence and skip the video
-     * @param {number} mediaErrorCode - 1 (aborted), 2 (network), 3 (decode), 4 (src not supported)
+     * Call when a video throws a error to log the occurrence and skip the video
+     * @param {{ code: number, text: string, where: string }} error
      */
-    function skipOnError(mediaErrorCode) {
+    function skipOnError(error) {
       responses.push({
         response: null,
         startMsec: videoStartMsec,
         durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec),
-        mediaErrorCode
+        error
       });
       checked = true;
       playNextVideo();
@@ -675,7 +675,11 @@
           )
           && numSkipsInRow < MAX_SKIPS_IN_ROW
         ) {
-          skipOnError(vidToPlay.error.code);
+          skipOnError({
+            code: vidToPlay.error.code,
+            text: vidToPlay.error.message,
+            where: 'playWhenReady'
+          });
         } else {
           var headerText = "Network Error";
           var bodyHTML = "<b>Don't refresh the page!</b>."

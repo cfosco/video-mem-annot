@@ -38,8 +38,14 @@ CREATE TABLE IF NOT EXISTS presentations (
   duplicate BOOLEAN NOT NULL,
   response BOOLEAN,
   start_msec INT,
-  duration_msec INT,
-  media_error_code TINYINT
+  duration_msec INT
 );
 
-
+CREATE TABLE IF NOT EXISTS errors (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  id_presentation INT NOT NULL,
+  FOREIGN KEY(id_presentation) REFERENCES presentations(id),
+  e_code INT,
+  e_text TEXT,
+  e_where TEXT
+)
