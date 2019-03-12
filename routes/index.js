@@ -83,12 +83,14 @@ router.post('/start', (req, res) => {
  *    and number of lives left
  */
 router.post('/end', (req, res) => {
-  saveResponses(
-    req.body.workerID,
-    req.body.levelID,
-    req.body.responses,
-    req.body.inputs
-  )
+  const args = {
+    workerID: req.body.workerID,
+    levelID: req.body.levelID,
+    responses: req.body.responses,
+    levelInputs: req.body.inputs,
+    errorEnd: req.body.errorEnd
+  };
+  saveResponses(args)
     .then(body => res.send(body))
     .catch((err) => {
       respondToError(err, res);

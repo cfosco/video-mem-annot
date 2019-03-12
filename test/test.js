@@ -199,11 +199,16 @@ describe('Test increasing levels', () => {
   test('Levels should increase', async (done) => {
     const username = 'testIncLevel';
     for (let i = 1; i <=3; i++) {
-      const inputs = await getVideos({workerID: username, ...userAgentData}, getSeqTemplate());
-      const {videos, level, levelID} = inputs;
+      const levelInputs = await getVideos({workerID: username, ...userAgentData}, getSeqTemplate());
+      const {videos, level, levelID} = levelInputs;
       expect(level).toBe(i);
       const answers = calcAnswers(videos, correct=true);
-      await saveResponses(username, levelID, answers, inputs);
+      await saveResponses({
+        workerID: username,
+        levelID,
+        responses: answers,
+        levelInputs
+      });
     }
     done();
   });
@@ -220,7 +225,12 @@ describe('Test dbops with invalid user', () => {
 
     test('saveResponses should throw error', async (done) => {
         await checkThrowsError(async() => {
-            await saveResponses(badUser, -1, [], {});
+            await saveResponses({
+              workerID: badUser,
+              levelID: -1,
+              responses: [],
+              levelInputs: {}
+            });
         }, UnauthenticatedError);
         done();
     });
@@ -230,7 +240,12 @@ describe('Test saveResponses invalid input', () => {
     const user = "badInpSaveResp";
     test('Submit without starting level should throw error', async (done) => {
         await checkThrowsError(async() => {
-            await saveResponses(user, -1, [], {});
+            await saveResponses({
+              workerID: 'badUser',
+              levelID: -1,
+              responses: [],
+              levelInputs: {}
+            });
         }, InvalidResultsError);
         done();
     });
@@ -238,7 +253,12 @@ describe('Test saveResponses invalid input', () => {
     test('Submit empty results should throw error', async (done) => {
         const { answers, inputs } = await getVidsAndMakeAnswers(user); // start level
         await checkThrowsError(async() => {
-            await saveResponses(user, -1, [], inputs);
+            await saveResponses({
+              workerID: user,
+              levelID: -1,
+              responses: [],
+              levelInputs: inputs
+            });
         }, InvalidResultsError);
         done();
     });
@@ -247,7 +267,12 @@ describe('Test saveResponses invalid input', () => {
         const { answers, inputs } = await getVidsAndMakeAnswers(user);
         await checkThrowsError(async() => {
             const invalidResponses = ["some", "random", "words"];
-            await saveResponses(user, inputs.levelID, invalidResponses, inputs);
+            await saveResponses({
+              workerID: user,
+              levelID: inputs.levelID,
+              responses: invalidResponses,
+              levelInputs: inputs
+            });
         }, InvalidResultsError);
         done();
     });
@@ -260,7 +285,12 @@ describe('Test saveResponses invalid input', () => {
                 url: "http://some-random-url.com/some-random-vid",
                 type: "filler"
             };
-            await saveResponses(user, inputs.levelID, answers, inputs);
+            await saveResponses({
+              workerID: user,
+              levelID: inputs.levelID,
+              responses: answers,
+              levelInputs: inputs
+            });
         }, InvalidResultsError);
         done();
     });
@@ -272,13 +302,15 @@ describe('Test errorOnFastSubmit', () => {
             const user = "errFastSubmit";
             const { answers, inputs } = await getVidsAndMakeAnswers(user);
             await saveResponses(
-                user,
-                inputs.levelID,
-                answers,
-                inputs,
-                reward=1,
-                levelsPerLife=50,
-                errorOnFastSubmit=true
+              {
+                workerID: user,
+                levelID: inputs.levelID,
+                responses: answers,
+                levelInputs: inputs
+              },
+              1,
+              50,
+              true
             );
         }, InvalidResultsError);
         done();
@@ -301,13 +333,15 @@ describe('Test errorOnFastSubmit', () => {
         } = await new Promise(resolve => {
             setTimeout(() => {
                 resolve(saveResponses(
-                    user,
+                  {
+                    workerID: user,
                     levelID,
-                    correctResponses,
-                    inputs,
-                    reward=1,
-                    levelsPerLife=50,
-                    errorOnFastSubmit=true
+                    responses: correctResponses,
+                    levelInputs: inputs
+                  },
+                  1,
+                  50,
+                  true
                 ));
             }, msecToWait);
         });
@@ -326,7 +360,12 @@ describe('Test save answers', () => {
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
+    } = await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    }, .5);
     expect(overallScore).toEqual(1);
     expect(numLives).toEqual(2);
     expect(vigilanceScore).toEqual(1);
@@ -345,7 +384,12 @@ describe('Test save answers', () => {
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
+    } = await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    }, .5);
     expect(numLives).toEqual(0);
     expect(passed).toBe(false);
     expect(completedLevels).toHaveLength(1);
@@ -365,10 +409,42 @@ describe('Test save answers', () => {
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
+    } = await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    }, .5);
     expect(numLives).toEqual(2);
     expect(passed).toBe(true);
     expect(completedLevels).toHaveLength(1);
+    done();
+  });
+
+  test('It should let you submit early with errors and not fail you', async (done) => {
+    const username = 'testErrorEnd';
+    let { answers, inputs } = await getVidsAndMakeAnswers(username);
+    answers = answers.slice(10);
+    answers[9].response = null;
+    answers[9].error = {
+      code: 1,
+      text: 'foo',
+      where: 'myFn'
+    };
+    const {
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs,
+      errorEnd: true
+    }, .5);
+    expect(numLives).toBe(undefined);
+    expect(passed).toBe(undefined);
+    expect(completedLevels).toHaveLength(0);
     done();
   });
 });
@@ -377,7 +453,12 @@ describe('Test submit', () => {
   test('It should set the total time and feedback', async (done) => {
     const username = 'testSubmit';
     const { answers, inputs } = await getVidsAndMakeAnswers(username);
-    await saveResponses(username, inputs.levelID, answers, inputs, reward=.5);
+    await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    }, reward=.5);
     const durationMsec = 10 * 60 * 1000;
     await submitLevel(inputs.levelID, durationMsec, 'Foo');
     const { feedback, duration_msec } = (await pool.query(
@@ -392,7 +473,12 @@ describe('Test submit', () => {
   test('It should set the feedback via API', async (done) => {
     const username = 'testSubmitAPI'
     const { answers, inputs } = await getVidsAndMakeAnswers(username);
-    await saveResponses(username, inputs.levelID, answers, inputs);
+    await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    });
     const durationMsec = 9 * 60 * 1000;
     request(app)
       .post(`/api/submit`)
@@ -456,12 +542,12 @@ describe('Test that accuracy metrics are saved in the db', () => {
           numLives,
           passed,
           completedLevels
-        } = await saveResponses(
-            username,
-            inputs.levelID,
-            answers,
-            inputs
-        );
+        } = await saveResponses({
+          workerID: username,
+          levelID: inputs.levelID,
+          responses: answers,
+          levelInputs: inputs
+        });
         expect(overallScore).toBe(1);
         expect(vigilanceScore).toBe(1);
         expect(passed).toBe(true);
@@ -483,12 +569,12 @@ describe('Test that accuracy metrics are saved in the db', () => {
           numLives,
           passed,
           completedLevels
-        } = await saveResponses(
-            username,
-            inputs.levelID,
-            answers,
-            inputs
-        );
+        } = await saveResponses({
+          workerID: username,
+          levelID: inputs.levelID,
+          responses: answers,
+          levelInputs: inputs
+        });
         expect(overallScore).toBe(0);
         expect(vigilanceScore).toBe(0);
         expect(passed).toBe(false);
@@ -527,12 +613,12 @@ describe('Test that accuracy metrics are saved in the db', () => {
           numLives,
           passed,
           completedLevels
-        } = await saveResponses(
-            username,
-            inputs.levelID,
-            answers,
-            inputs
-        );
+        } = await saveResponses({
+          workerID: username,
+          levelID: inputs.levelID,
+          responses: answers,
+          levelInputs: inputs
+        });
         //expect(overallScore).toBe();
         expect(vigilanceScore).toBe(.5);
     
@@ -557,14 +643,12 @@ describe('Test lives increment when correct', () => {
           numLives,
           passed,
           completedLevels
-        } = await saveResponses(
-            username,
-            inputs.levelID,
-            answers,
-            inputs,
-            reward=1,
-            levelsPerLife=3
-        );
+        } = await saveResponses({
+          workerID: username,
+          levelID: inputs.levelID,
+          responses: answers,
+          levelInputs: inputs
+        }, 1, 3);
         expect(completedLevels.length).toEqual(i);
         if (i >= 3) {
             expect(numLives).toEqual(3);
@@ -582,13 +666,12 @@ describe('Test rewards', () => {
     var responses;
     for (let i = 0; i < 5; i++) {
         const { answers, inputs } = await getVidsAndMakeAnswers(username);
-        responses = await saveResponses(
-            username,
-            inputs.levelID,
-            answers,
-            inputs,
-            reward=i
-        );
+        responses = await saveResponses({
+          workerID: username,
+          levelID: inputs.levelID,
+          responses: answers,
+          levelInputs: inputs
+        }, i);
         const levels = responses.completedLevels;
         expect(levels[levels.length-1].reward).toEqual(i);
     }
@@ -614,13 +697,12 @@ describe('Test rewards', () => {
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(
-        username,
-        inputs.levelID,
-        answers,
-        inputs,
-        reward=1,
-    );
+    } = await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    }, 1);
     expect(passed).toBe(false);
     expect(numLives).toBe(0);
     expect(completedLevels[completedLevels.length-1].reward).toEqual(1);
@@ -651,12 +733,14 @@ describe('Test level concurrency', () => {
               passed,
               completedLevels
             } = await saveResponses(
-                username,
-                inputs.levelID,
-                answers,
-                inputs,
-                reward=1,
-                levelsPerLife
+              {
+                workerID: username,
+                levelID: inputs.levelID,
+                responses: answers,
+                levelInputs: inputs
+              },
+              1,
+              levelsPerLife
             );
             expect(overallScore).toBe(1);
             expect(vigilanceScore).toBe(1);
@@ -684,7 +768,12 @@ describe('Test level concurrency', () => {
               numLives,
               passed,
               completedLevels
-            } = await saveResponses(username, inputs.levelID, answers, inputs);
+            } = await saveResponses({
+              workerID: username,
+              levelID: inputs.levelID,
+              responses: answers,
+              levelInputs: inputs
+            });
             expect(completedLevels.length).toBe(i+1);
         }
         done();
@@ -704,7 +793,12 @@ describe('Test failure on first round', () => {
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, inputs.levelID, answers, inputs);
+    } = await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    });
     expect(numLives).toEqual(0);
     expect(passed).toBe(false);
 
@@ -713,7 +807,12 @@ describe('Test failure on first round', () => {
     }, BlockedError);
 
     await checkThrowsError(async() => {
-        await saveResponses(username, -1, [], {});
+        await saveResponses({
+          workerID: username,
+          levelID: -1,
+          responses: [],
+          levelInputs: {}
+        });
     }, BlockedError);
 
     done();
@@ -725,11 +824,13 @@ describe('Test failure on later rounds', () => {
     const username = 'testFailLater';
     const { answers: rightAnswers, inputs: rightInputs } = await getVidsAndMakeAnswers(username);
     const {
-      overallScore,
-      vigilanceScore,
       numLives,
-      completedLevels
-    } = await saveResponses(username, rightInputs.levelID, rightAnswers, rightInputs);
+    } = await saveResponses({
+      workerID: username,
+      levelID: rightInputs.levelID,
+      responses: rightAnswers,
+      levelInputs: rightInputs
+    });
     expect(numLives).toEqual(2);
 
     var finalLives;
@@ -739,12 +840,14 @@ describe('Test failure on later rounds', () => {
         correct=false
       );
       const {
-        overallScore,
-        vigilanceScore,
         numLives,
         passed,
-        completedLevels
-      } = await saveResponses(username, wrongInputs.levelID, wrongAnswers, wrongInputs);
+      } = await saveResponses({
+        workerID: username,
+        levelID: wrongInputs.levelID,
+        responses: wrongAnswers,
+        levelInputs: wrongInputs
+      });
       expect(passed).toBe(false);
       finalLives = numLives;
     }
@@ -754,7 +857,12 @@ describe('Test failure on later rounds', () => {
     }, BlockedError);
 
     await checkThrowsError(async() => {
-        await saveResponses(username, -1, [], {});
+        await saveResponses({
+          workerID: username,
+          levelID: -1,
+          responses: [],
+          levelInputs: {}
+        });
     }, BlockedError);
 
     done();
@@ -804,7 +912,12 @@ describe('Test game start blocked user', () => {
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, inputs.levelID, answers, inputs);
+    } = await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    });
     expect(numLives).toBe(0);
     request(app)
       .post('/api/start')
@@ -861,7 +974,12 @@ describe('Test game end blocked user', () => {
       numLives,
       passed,
       completedLevels
-    } = await saveResponses(username, wrongInputs.levelID, wrongAnswers, wrongInputs);
+    } = await saveResponses({
+      workerID: username,
+      levelID: wrongInputs.levelID,
+      responses: wrongAnswers,
+      levelInputs: wrongInputs
+    });
     expect(numLives).toBe(0);
 
     request(app)
@@ -1085,7 +1203,12 @@ describe('Test update label counts', () => {
     }
     const username = "testFixLabelCountsCompletedGame";
     const { answers, inputs } = await getVidsAndMakeAnswers(username, true, true);
-    await saveResponses(username, inputs.levelID, answers, inputs);
+    await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    });
     await fixLabelCounts();
     const labelCounts = await pool.query('SELECT labels FROM videos;');
     expect(labelCounts.filter(({ labels }) => labels === 0)).toHaveLength(2);

@@ -298,13 +298,11 @@ function calcScores(presentations) {
 }
 
 async function saveResponses(
-  workerID,
-  levelID,
-  responses,
-  levelInputs,
+  data,
   reward = config.rewardAmount,
   levelsPerLife = N_LEVELS_PER_NEW_LIFE,
   errorOnFastSubmit = config.errorOnFastSubmit) {
+  const { workerID, levelID, responses, levelInputs, errorEnd } = data;
 
   await assertNotBlocked(workerID, true);
   const userID = await getUser(workerID);
@@ -336,7 +334,7 @@ async function saveResponses(
   const timeDiffMsec = new Date(nowTS).getTime() - new Date(levels[0].insert_time).getTime();
 
   // check that the submission is neither too fast nor too slow
-  if (errorOnFastSubmit) {
+  if (errorOnFastSubmit && !errorEnd) {
     // set the minTime to about 1s per video, which should be plenty
     const minTimeMsec = numBoolResponses * 1 * 1000;
     if (timeDiffMsec < minTimeMsec) {
@@ -388,6 +386,11 @@ async function saveResponses(
     throw new InvalidResultsError('Invalid responses.');
   }
 
+  let overallScore;
+  let vigilanceScore;
+  let numLives;
+  let passed;
+
   // save the responses
   await withinTX(async (connection) => {
     // update db with answers
@@ -420,6 +423,9 @@ async function saveResponses(
       );
     }
 
+    // if their game ended due to an error, don't mark as completed
+    if (errorEnd) return;
+
     // calcualate level number (before setting the score since that changes it)
     const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
       + 'WHERE id_user = ? AND score IS NOT NULL'
@@ -429,7 +435,11 @@ async function saveResponses(
     // calculate and set score
     const presentations = await connection.query('SELECT response, duplicate, vigilance'
       + ' FROM presentations WHERE id_level = ? ORDER BY position', levelID);
-    const { passed, overallScore, vigilanceScore, falsePositiveRate } = calcScores(presentations);
+    const calc = calcScores(presentations);
+    passed = calc.passed;
+    overallScore = calc.overallScore;
+    vigilanceScore = calc.vigilanceScore;
+    falsePositiveRate = calc.falsePositiveRate;
     await connection.query('UPDATE levels SET score = ?, vig_score = ?, false_pos_rate = ?, reward = ? WHERE id = ?', [overallScore, vigilanceScore, falsePositiveRate, reward, levelID]);
 
     // update num lives

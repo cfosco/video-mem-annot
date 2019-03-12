@@ -197,6 +197,7 @@
     var counter = 0; // index in transcripts of next video to load
     var checked = false; // don't check video at end if already checked
     var responses = [];
+    var errorEnd = false;
 
     function showRadialPercentage(score, passed) {
       $('#score-radial').attr("data-percentage", (score * 100).toFixed(0) + '%');
@@ -435,16 +436,29 @@
           workerID: workerId,
           levelID: levelID,
           responses: responses,
-          inputs: taskData
+          inputs: taskData,
+          errorEnd
         }
         $.post({
           url: "api/end/",
           data: JSON.stringify(payload),
           contentType: 'application/json; charset=utf-8',
           dataType: 'json'
-        }).done(showResultsPage)
+        }).done(function(data) {
+          if (!errorEnd) {
+            showResultsPage(data);
+          }
+        })
         .catch(function(err) {
-          showError(err.responseText, "Your answers could not be submitted.", err)
+          payload.err = err;
+          showError(err.responseText, "Your answers could not be submitted.", function() {
+            $.post({
+              "url": "api/log/",
+              "data": {
+                message: JSON.stringify(payload)
+              }
+            });
+          });
         });
       }
     }
@@ -663,37 +677,70 @@
       }
     }
 
+    /**
+     * Tells the user to check their network
+     * Starts a retry loop
+     * Does not log to the server
+     */
+    function networkError(vidToPlay, retryFn) {
+      var headerText = "Network Error";
+      var bodyHTML = "<b>Don't refresh the page!</b>."
+        + " The video could not be loaded, probably due to a problem with your connection."
+        + " The game will automatically resume when the problem is resolved."
+        + " If you are able to access other websites but the game is still broken,"
+        + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
+        + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
+        + "<br><b>Video url: </b>" + vidToPlay.src
+        + "<br><b>Error code: </b>" + vidToPlay.error.code
+        + "<br><b>Error message: </b>" + vidToPlay.error.message;
+      showError(bodyHTML, headerText);
+      setTimeout(() => {
+        vidToPlay.load();
+        retryFn();
+      }, 3000);
+    }
+
+    /**
+     * Tells the user to try a different browser or email us
+     * The level cannot be continued at this point
+     * Does log to the server
+     */
+    function unknownError(vidToPlay, err, where) {
+      var headerText = "Unkown Error";
+      var bodyHTML = "There was an error playing this video."
+        + ' If you just started the game, please try a different browser. Otherwise,'
+        + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
+        + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
+        + " "
+        + "<br><b>Video url: </b>" + vidToPlay.src
+        + "<br><b>Error code: </b>" + err.code
+        + "<br><b>Error message: </b>" + err.message;
+      showError(bodyHTML, headerText, function() {
+        skipOnError({
+          code: err.code,
+          text: err.message,
+          where
+        });
+        errorEnd = true;
+        submitData();
+      });
+    }
+
     function playWhenReady(vidToPlay) {
       function onError() {
-        console.log('video error', vidToPlay.error);
-        if (
-          (
-            vidToPlay.error.code === MediaError.MEDIA_ERR_DECODE
-            || vidToPlay.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
-          )
-          && numSkipsInRow < MAX_SKIPS_IN_ROW
-        ) {
+        var maybeNetwork =
+          vidToPlay.error.code === MediaError.MEDIA_ERR_DECODE
+          || vidToPlay.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED;
+        if (maybeNetwork && numSkipsInRow < MAX_SKIPS_IN_ROW) {
           skipOnError({
             code: vidToPlay.error.code,
             text: vidToPlay.error.message,
             where: 'playWhenReady'
           });
+        } else if (maybeNetwork) {
+          networkError(vidToPlay, playIfReady);
         } else {
-          var headerText = "Network Error";
-          var bodyHTML = "<b>Don't refresh the page!</b>."
-            + " The video could not be loaded, probably due to a problem with your connection."
-            + " The game will automatically resume when the problem is resolved."
-            + " If you are able to access other websites but the game is still broken,"
-            + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
-            + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
-            + "<br><b>Video url: </b>" + vidToPlay.src
-            + "<br><b>Error code: </b>" + vidToPlay.error.code
-            + "<br><b>Error message: </b>" + vidToPlay.error.message;
-          showError(bodyHTML, headerText, vidToPlay.error);
-          setTimeout(() => {
-            vidToPlay.load();
-            playIfReady();
-          }, 3000);
+          unknownError(vidToPlay, vidToPlay.error, 'playWhenReady');
         }
       }
 
@@ -715,16 +762,7 @@
                   where: 'playIfReady -> video.play'
                 });
               } else {
-                var headerText = "Unkown Error";
-                var bodyHTML = "There was an error playing this video."
-                  + ' If you just started the game, please try a different browser. Otherwise,'
-                  + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
-                  + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
-                  + " "
-                  + "<br><b>Video url: </b>" + vidToPlay.src
-                  + "<br><b>Error code: </b>" + err.code
-                  + "<br><b>Error message: </b>" + err.message;
-                showError(bodyHTML, headerText, err);
+                unknownError(vidToPlay, err, 'playIfReady -> video.play');
               }
             });
         } else if (vidToPlay.error) {
@@ -773,31 +811,19 @@
     }
   }
 
+  var dumped = false;
   /**
    * Displays an error message received by an API endpoint to the user.
    * If you give err, it logs the err as JSON along with the user's progress
    */
-  function showError(errorText, headerText, err) {
+  function showError(errorText, headerText, then) {
     $("#error-message").find(".header").text(headerText);
     $("#error-message").find("p").html(errorText);
     $("#main-interface").hide();
     $("#instructions").hide();
     $("#experiment").show();
     $("#error-message").show();
-    if (err) {
-      $.post({
-        "url": "api/log/",
-        "data": {
-          message: JSON.stringify({
-            workerID: workerId,
-            levelID: levelID,
-            responses: responses,
-            inputs: taskData,
-            err
-          })
-        }
-      });
-    }
+    if (then) then();
   }
 
   function hideError() {
