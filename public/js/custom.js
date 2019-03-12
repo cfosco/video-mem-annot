@@ -606,17 +606,21 @@
       }
     }
 
-    /**
-     * Call when a video throws a error to log the occurrence and skip the video
-     * @param {{ code: number, text: string, where: string }} error
-     */
-    function skipOnError(error) {
+    function saveErrorResponse(error) {
       responses.push({
         response: null,
         startMsec: videoStartMsec,
         durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec),
         error
       });
+    }
+
+    /**
+     * Call when a video throws a error to log the occurrence and skip the video
+     * @param {{ code: number, text: string, where: string }} error
+     */
+    function skipOnError(error) {
+      saveErrorResponse(error);
       checked = true;
       playNextVideo();
       numSkipsInRow += 1;
@@ -716,7 +720,7 @@
         + "<br><b>Error code: </b>" + err.code
         + "<br><b>Error message: </b>" + err.message;
       showError(bodyHTML, headerText, function() {
-        skipOnError({
+        saveErrorResponse({
           code: err.code,
           text: err.message,
           where
