@@ -44,7 +44,11 @@
     }
     submitUrl = submitDomain + 'mturk/externalSubmit';
     assignmentId = urlParams.get('assignmentId') || '';
-    workerId = urlParams.get('workerId') || '';
+    workerId = urlParams.get('workerId') || localStorage['workerId'];
+    if (!workerId) {
+      workerId = 'NOAMT:' + uuidv4();
+      localStorage['workerId'] = workerId;
+    }
     hitId = urlParams.get('hitId') || '';
   }
 
@@ -838,7 +842,7 @@
     taskStartMsec = (new Date()).getTime();
     getURLParams();
 
-    if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE" || !workerId) {
+    if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE") {
       $('#start-button').hide();
       $("#accept-hit-message").show();
       $('.level-num').parent().hide();
