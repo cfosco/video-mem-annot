@@ -415,7 +415,12 @@ async function saveResponses(
     if (errorInserts.length > 0) {
       const getIDsQuery = 'SELECT id FROM presentations WHERE position = ? AND id_level = ?; '
         .repeat(errorInserts.length);
-      const ids = (await connection.query(getIDsQuery, getIDsArgs)).map(row => row[0].id);
+      let ids = (await connection.query(getIDsQuery, getIDsArgs));
+      if (ids.length === 1) {
+        ids = ids.map(row => row.id);
+      } else {
+        ids = ids.map(row => row[0].id);
+      }
       await connection.query('INSERT INTO errors '
         + ' (id_presentation, e_code, e_text, e_where)'
         + ' VALUES ?',

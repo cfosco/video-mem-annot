@@ -405,6 +405,31 @@ describe('Test save answers', () => {
       text: 'foo',
       where: 'myFn'
     };
+    const {
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    }, .5);
+    expect(numLives).toEqual(2);
+    expect(passed).toBe(true);
+    expect(completedLevels).toHaveLength(1);
+    done();
+  });
+
+  test('It should let you submit with multiple errors', async (done) => {
+    const username = 'testSubmitErrorMultiple';
+    const { answers, inputs } = await getVidsAndMakeAnswers(username);
+    answers[0].response = null;
+    answers[0].error = {
+      code: 1,
+      text: 'foo',
+      where: 'myFn'
+    };
     answers[10].response = null;
     answers[10].error = {
       code: 1,
