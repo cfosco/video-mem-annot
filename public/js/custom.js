@@ -149,7 +149,6 @@
       TARGET: "target",
       FILLER: "filler",
     }
-    var CLIP_DURATION = 3; // in seconds
     var LOAD_VIDEOMEM = false
 
     if (LOAD_VIDEOMEM) {

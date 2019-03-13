@@ -405,6 +405,18 @@ describe('Test save answers', () => {
       text: 'foo',
       where: 'myFn'
     };
+    answers[10].response = null;
+    answers[10].error = {
+      code: 1,
+      text: 'foo',
+      where: 'myFn'
+    };
+    answers[11].response = null;
+    answers[11].error = {
+      code: 1,
+      text: 'foo',
+      where: 'myFn'
+    };
     const {
       numLives,
       passed,
