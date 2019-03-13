@@ -405,9 +405,9 @@ async function saveResponses(
     // update db with errors
     const getIDsArgs = [];
     let errorInserts = [];
-    responses.forEach(({ error }, i) => {
+    responses.forEach(({ error }, position) => {
       if (error) {
-        getIDsArgs.push(i);
+        getIDsArgs.push(position);
         getIDsArgs.push(levelID);
         errorInserts.push([error.code, error.text, error.where]);
       }
@@ -415,7 +415,7 @@ async function saveResponses(
     if (errorInserts.length > 0) {
       const getIDsQuery = 'SELECT id FROM presentations WHERE position = ? AND id_level = ?; '
         .repeat(errorInserts.length);
-      const ids = (await connection.query(getIDsQuery, getIDsArgs)).map(row => row.id);
+      const ids = (await connection.query(getIDsQuery, getIDsArgs)).map(row => row[0].id);
       await connection.query('INSERT INTO errors '
         + ' (id_presentation, e_code, e_text, e_where)'
         + ' VALUES ?',
