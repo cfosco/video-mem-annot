@@ -369,11 +369,11 @@ async function saveResponses(
         (typeof (response) === "boolean" && error == null)
         || (
           response == null
-          && error
+          && error // needed because typeof null is object
           && typeof (error) === "object"
-          && typeof (error.code) === "number"
-          && typeof (error.text) === "string"
-          && typeof (error.where) === "string"
+          && (error.code == null || typeof (error.code) === "number")
+          && (error.text == null || typeof (error.text) === "string")
+          && (error.where == null || typeof (error.where) === "string")
         ),
         "a valid response should be a boolean with a null/undefined error\n"
         + "a valid error should be a null response with a numeric error code"
@@ -415,7 +415,12 @@ async function saveResponses(
     if (errorInserts.length > 0) {
       const getIDsQuery = 'SELECT id FROM presentations WHERE position = ? AND id_level = ?; '
         .repeat(errorInserts.length);
-      const ids = (await connection.query(getIDsQuery, getIDsArgs)).map(row => row[0].id);
+      let ids = (await connection.query(getIDsQuery, getIDsArgs));
+      if (ids.length === 1) {
+        ids = ids.map(row => row.id);
+      } else {
+        ids = ids.map(row => row[0].id);
+      }
       await connection.query('INSERT INTO errors '
         + ' (id_presentation, e_code, e_text, e_where)'
         + ' VALUES ?',
