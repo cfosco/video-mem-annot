@@ -570,12 +570,15 @@
 
         if (SHOW_FLASH) {
           // clear the old anim value
-          $mainInterface.css('animation', 'none');
+          $mainInterface.css('animation', '');
           // trigger a "reflow" to get the anim to reset
           void $mainInterface.css('animation');
-          // set the new anim value
-          var val = (right ? 'right' : 'wrong') + ' 0.5s';
-          $mainInterface.css('animation', val);
+          // delay of 1msec is required to get the reset on some browsers
+          setTimeout(function() {
+            // set the new anim value
+            var val = (right ? 'right' : 'wrong') + ' 0.5s';
+            $mainInterface.css('animation', val);
+          }, 1);
         }
       }
       numSkipsInRow = 0;
