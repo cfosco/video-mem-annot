@@ -1,25 +1,3 @@
-@keyframes right {
-  0% {
-    background-color: green;
-    background-color: rgba(0, 255, 0, 0.25);
-  }
-  100% {
-    background-color: none;
-    background-color: rgba(0, 0, 0, 0);
-  }
-}
-
-@keyframes wrong {
-  0% {
-    background-color: red;
-    background-color: rgba(255, 0, 0, 0.25);
-  }
-  100% {
-    background-color: none;
-    background-color: rgba(0, 0, 0, 0);
-  }
-}
-
 /* IMO border-box is more intuitive and should be the default */
 *, *::before, *::after {
   box-sizing: border-box;

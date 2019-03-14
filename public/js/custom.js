@@ -570,15 +570,9 @@
 
         if (SHOW_FLASH) {
           // clear the old anim value
-          $mainInterface.css('animation', '');
-          // trigger a "reflow" to get the anim to reset
-          void $mainInterface.css('animation');
-          // delay of 1msec is required to get the reset on some browsers
-          setTimeout(function() {
-            // set the new anim value
-            var val = (right ? 'right' : 'wrong') + ' 0.5s';
-            $mainInterface.css('animation', val);
-          }, 1);
+          var bgColor = right ? 'rgba(0, 255, 0, 0.25)' : 'rgba(255, 0, 0, 0.25)';
+          $mainInterface.stop().css('background-color', bgColor)
+            .animate({ 'background-color': 'rgba(255, 255, 255, 0)' }, 500);
         }
       }
       numSkipsInRow = 0;
