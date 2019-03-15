@@ -675,7 +675,7 @@ if (!String.prototype.endsWith) {
       $video.attr('src', src);
       $video.attr('controls', null);
       $video.data('vidType', type);
-      $video.attr('muted', 'muted');
+      $video.attr('muted');
       $video.html('Your browser does not support HTML5 video.');
       $video.attr('playsinline', 'playsinline'); // needed by iOS
       $video[0].load(); // needed by iOS
