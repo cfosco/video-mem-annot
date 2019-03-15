@@ -1,3 +1,12 @@
+if (!String.prototype.endsWith) {
+  String.prototype.endsWith = function(search, this_len) {
+      if (this_len === undefined || this_len > this.length) {
+          this_len = this.length;
+      }
+      return this.substring(this_len - search.length, this_len) === search;
+  };
+}
+
 (function () {
 
   // add playing property to video elements
@@ -122,9 +131,9 @@
     $.post({
       url: 'api/submit',
       data: JSON.stringify({
-        levelID,
+        levelID: levelID,
         taskTimeMsec: (new Date()).getTime() - taskStartMsec,
-        feedback
+        feedback: feedback
       }),
       contentType: 'application/json; charset=utf-8',
       dataType: 'json'
@@ -169,7 +178,6 @@
     });
 
     // ui configuration options
-    var SHOW_PLAY_PAUSE = false;
     var SHOW_PROGRESS = true;
     var SHOW_FLASH = true;
     var JUMP_ON_RIGHT = true;
@@ -193,7 +201,7 @@
     var $mainInterface = $('#main-interface');
     var $experiment = $('#custom-experiment');
     var $endGame = $('#endGame')
-    var videoContainer = document.getElementById('video_container');
+    var $videoContainer = $('#video_container');
 
     // state
     var videoElements = [];
@@ -440,7 +448,7 @@
           levelID: levelID,
           responses: responses,
           inputs: taskData,
-          errorEnd
+          errorEnd: errorEnd
         }
         $.post({
           url: "api/end/",
@@ -515,8 +523,8 @@
     /**
      * @return {boolean} whether or not the current video is a repeat
      */
-    function isRepeat(vid) {
-      var curVidType = vid.dataset.vidType;
+    function isRepeat($video) {
+      var curVidType = $video.data('vidType');
       return (
         curVidType === VID_TYPES.VIG_REPEAT)
         || (curVidType === VID_TYPES.TARGET_REPEAT
@@ -548,21 +556,21 @@
     function handleCheck(response, showFeedback) {
       if (checked) return;
 
-      var clickedVid = videoElements[0];
+      var $video = videoElements[0];
       responses.push({
-        response,
+        response: response,
         startMsec: videoStartMsec,
         durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec)
       });
-      var right = isRepeat(clickedVid) === response;
+      var right = isRepeat($video) === response;
       checked = true;
-      updateFrac(fracs[clickedVid.dataset.vidType], right);
+      updateFrac(fracs[$video.data('vidType')], right);
 
       if (showFeedback) {
         if ((right && JUMP_ON_RIGHT) || (!right && JUMP_ON_WRONG)) {
           setTimeout(function() {
             // only advance if the video has not already advanced (avoid a double-skip)
-            if (videoElements[0].src == clickedVid.src) {
+            if (videoElements[0].attr('src') == $video.attr('src')) {
               playNextVideo();
             }
           }, VID_CHANGE_LAG_MSEC);
@@ -570,12 +578,9 @@
 
         if (SHOW_FLASH) {
           // clear the old anim value
-          $mainInterface.css('animation', 'none');
-          // trigger a "reflow" to get the anim to reset
-          void $mainInterface.css('animation');
-          // set the new anim value
-          var val = (right ? 'right' : 'wrong') + ' 0.5s';
-          $mainInterface.css('animation', val);
+          var bgColor = right ? 'rgba(0, 255, 0, 0.25)' : 'rgba(255, 0, 0, 0.25)';
+          $mainInterface.stop().css('background-color', bgColor)
+            .animate({ 'background-color': 'rgba(255, 255, 255, 0)' }, 500);
         }
       }
       numSkipsInRow = 0;
@@ -614,7 +619,7 @@
         response: null,
         startMsec: videoStartMsec,
         durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec),
-        error
+        error: error
       });
     }
 
@@ -631,8 +636,9 @@
 
     function playNextVideo() {
       // remove current video
-      videoElements[0].onended = function () { }; // sometimes it gets called again
-      videoElements[0].remove();
+      var $oldVideo = videoElements[0];
+      $oldVideo.off('ended'); // sometimes it gets called again
+      $oldVideo.remove();
 
       if (earlyFail()) {
         submitData();
@@ -665,23 +671,25 @@
      * @param {valueof VID_TYPES} type
      */
     function newVideo(src, type) {
-      var video = document.createElement('video');
-      video.setAttribute('src', src);
-      video.dataset.vidType = type;
-      video.muted = 'muted';
-      video.innerHTML = 'Your browser does not support HTML5 video.';
-      video.setAttribute('playsinline', 'playsinline'); // needed by iOS
-      video.load(); // needed by iOS
-      video.style.visibility = 'hidden';
-      videoContainer.appendChild(video);
-      videoElements.push(video);
+      var $video = $('<video></video>');
+      $video.attr('src', src);
+      $video.attr('controls', null);
+      $video.data('vidType', type);
+      $video.attr('muted', 'muted');
+      $video.html('Your browser does not support HTML5 video.');
+      $video.attr('playsinline', 'playsinline'); // needed by iOS
+      $video[0].load(); // needed by iOS
+      $video.css('visibility', 'hidden');
+      $videoContainer.append($video);
+      objectFitPolyfill($video); // polyfill
+      videoElements.push($video);
 
-      video.onended = function () {
+      $video.on('ended', function () {
         // check for missed repeat
         handleCheck(false, false);
         // remove active video
         playNextVideo();
-      }
+      });
     }
 
     /**
@@ -689,7 +697,8 @@
      * Starts a retry loop
      * Does not log to the server
      */
-    function networkError(vidToPlay, retryFn) {
+    function networkError($video, retryFn) {
+      var error = $video[0].error;
       var headerText = "Network Error";
       var bodyHTML = "<b>Don't refresh the page!</b>."
         + " The video could not be loaded, probably due to a problem with your connection."
@@ -697,12 +706,12 @@
         + " If you are able to access other websites but the game is still broken,"
         + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
         + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
-        + "<br><b>Video url: </b>" + vidToPlay.src
-        + "<br><b>Error code: </b>" + vidToPlay.error.code
-        + "<br><b>Error message: </b>" + vidToPlay.error.message;
+        + "<br><b>Video url: </b>" + $video.attr('src')
+        + "<br><b>Error code: </b>" + error.code
+        + "<br><b>Error message: </b>" + error.message;
       showError(bodyHTML, headerText);
-      setTimeout(() => {
-        vidToPlay.load();
+      setTimeout(function() {
+        $video[0].load();
         retryFn();
       }, 3000);
     }
@@ -712,56 +721,54 @@
      * The level cannot be continued at this point
      * Does log to the server
      */
-    function unknownError(vidToPlay, err, where) {
+    function unknownError($video, error, where) {
       var headerText = "Unkown Error";
       var bodyHTML = "There was an error playing this video."
         + ' If you just started the game, please try a different browser. Otherwise,'
         + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
         + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
         + " "
-        + "<br><b>Video url: </b>" + vidToPlay.src
-        + "<br><b>Error code: </b>" + err.code
-        + "<br><b>Error message: </b>" + err.message;
+        + "<br><b>Video url: </b>" + $video.attr('src');
+        + "<br><b>Error code: </b>" + error.code
+        + "<br><b>Error message: </b>" + error.message;
       showError(bodyHTML, headerText, function() {
         saveErrorResponse({
-          code: err.code,
-          text: err.message,
-          where
+          code: error.code,
+          text: error.message,
+          where: where
         });
         errorEnd = true;
         submitData();
       });
     }
 
-    function playWhenReady(vidToPlay) {
+    function playWhenReady($video) {
       function onError() {
-        var maybeNetwork =
-          vidToPlay.error.code === MediaError.MEDIA_ERR_DECODE
-          || vidToPlay.error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED;
-        if (maybeNetwork && numSkipsInRow < MAX_SKIPS_IN_ROW) {
+        var error = $video[0].error;
+        var maybeBadVideo = error.code !== MediaError.MEDIA_ERR_NETWORK;
+        if (maybeBadVideo && numSkipsInRow < MAX_SKIPS_IN_ROW) {
           skipOnError({
-            code: vidToPlay.error.code,
-            text: vidToPlay.error.message,
+            code: error.code,
+            text: error.message,
             where: 'playWhenReady'
           });
-        } else if (maybeNetwork) {
-          networkError(vidToPlay, playIfReady);
         } else {
-          unknownError(vidToPlay, vidToPlay.error, 'playWhenReady');
+          networkError($video, playIfReady);
         }
       }
 
       function playIfReady() {
-        if (vidToPlay.readyState == 4) {
+        if ($video[0].readyState == 4) {
           hideError();
           $("#vid-loading-dimmer").addClass('disabled').removeClass('active');
-          vidToPlay.style.visibility = 'visible';
+          $video.css('visibility', 'visible');
           if (gameStartMsec === undefined) {
             gameStartMsec = (new Date()).getTime();
           }
           videoStartMsec = (new Date()).getTime() - gameStartMsec;
-          vidToPlay.play()
-            .catch(function(err) {
+          var playPromise = $video[0].play();
+          if (playPromise) {
+            playPromise.catch(function(err) {
               if (numSkipsInRow < MAX_SKIPS_IN_ROW) {
                 skipOnError({
                   code: err.code,
@@ -769,10 +776,11 @@
                   where: 'playIfReady -> video.play'
                 });
               } else {
-                unknownError(vidToPlay, err, 'playIfReady -> video.play');
+                unknownError($video, err, 'playIfReady -> video.play');
               }
             });
-        } else if (vidToPlay.error) {
+          }
+        } else if ($video[0].error) {
           onError();
         } else {
           // show loading
@@ -780,14 +788,14 @@
         }
       }
 
-      vidToPlay.onerror = onError;
-      vidToPlay.oncanplaythrough = playIfReady;
+      $video.on('error', onError);
+      $video.on('canplaythrough', playIfReady);
       playIfReady();
     }
 
     // HANDLE KEYPRESS (Spacebar)
     document.onkeydown = function (e) {
-      if (e.keyCode == 32 && videoElements.length > 0 && videoElements[0].playing) {
+      if (e.keyCode == 32 && videoElements.length > 0 && videoElements[0][0].playing) {
         e.preventDefault(); // don't move page
         handleCheck(true, true);
       }
@@ -797,10 +805,6 @@
     $('#video_container').on('touchstart', function() {
       handleCheck(true, true);
     });
-
-    if (SHOW_PLAY_PAUSE) {
-      $('.dev-controls').show();
-    }
 
     if (!SHOW_PROGRESS) {
       $('#progress-bar').css('display', 'none');
@@ -812,10 +816,7 @@
     for (counter; counter < numVidsToLoad; counter += 1) {
       newVideo(transcripts[counter], types[counter]);
     }
-    if (!SHOW_PLAY_PAUSE) {
-      //videoElements[0].play();
-      playWhenReady(videoElements[0]);
-    }
+    playWhenReady(videoElements[0]);
   }
 
   var dumped = false;

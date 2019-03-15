@@ -458,6 +458,27 @@ describe('Test save answers', () => {
     done();
   });
 
+  test('It should let the error object be empty', async (done) => {
+    const username = 'testSubmitErrorEmpty';
+    const { answers, inputs } = await getVidsAndMakeAnswers(username);
+    answers[0].response = null;
+    answers[0].error = {};
+    const {
+      numLives,
+      passed,
+      completedLevels
+    } = await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    }, .5);
+    expect(numLives).toEqual(2);
+    expect(passed).toBe(true);
+    expect(completedLevels).toHaveLength(1);
+    done();
+  });
+
   test('It should let you submit early with errors and not fail you', async (done) => {
     const username = 'testErrorEnd';
     let { answers, inputs } = await getVidsAndMakeAnswers(username);

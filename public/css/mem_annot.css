@@ -1,25 +1,3 @@
-@keyframes right {
-  0% {
-    background-color: green;
-    background-color: rgba(0, 255, 0, 0.25);
-  }
-  100% {
-    background-color: none;
-    background-color: rgba(0, 0, 0, 0);
-  }
-}
-
-@keyframes wrong {
-  0% {
-    background-color: red;
-    background-color: rgba(255, 0, 0, 0.25);
-  }
-  100% {
-    background-color: none;
-    background-color: rgba(0, 0, 0, 0);
-  }
-}
-
 /* IMO border-box is more intuitive and should be the default */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -107,20 +85,14 @@ we do this by having a smaller container with hidden overflow */
   position: relative;
 }
 
-#video_container > video {
-  /* we have many video elements but only want to show the top one */
-  display: none;
+#video_container video {
   /* picture fill whole element without stretching (cropping if necessary) */
   object-fit: cover;
+  font-family: 'object-fit: cover;'; /* polyfill */
   position: absolute;
   top: 0; bottom: 0; left: 0; right: 0;
   width: 100%;
   height: 100%;
-}
-
-/* override style to make top video show */
-#video_container > video:first-of-type {
-  display: initial;
 }
 
 #progress-bar {
