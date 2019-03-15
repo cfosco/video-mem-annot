@@ -636,8 +636,9 @@ if (!String.prototype.endsWith) {
 
     function playNextVideo() {
       // remove current video
-      videoElements[0].off('ended'); // sometimes it gets called again
-      videoElements[0].remove();
+      var $oldVideo = videoElements[0];
+      $oldVideo.off('ended'); // sometimes it gets called again
+      $oldVideo.remove();
 
       if (earlyFail()) {
         submitData();
@@ -680,7 +681,7 @@ if (!String.prototype.endsWith) {
       $video[0].load(); // needed by iOS
       $video.css('visibility', 'hidden');
       $videoContainer.append($video);
-      objectFitVideos($video[0]); // polyfill
+      objectFitPolyfill($video); // polyfill
       videoElements.push($video);
 
       $video.on('ended', function () {
