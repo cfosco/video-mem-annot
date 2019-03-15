@@ -671,11 +671,11 @@ if (!String.prototype.endsWith) {
      * @param {valueof VID_TYPES} type
      */
     function newVideo(src, type) {
-      var $video = $('<video></video>');
+      var $video = $("<video></video>");
       $video.attr('src', src);
       $video.attr('controls', null);
       $video.data('vidType', type);
-      $video.attr('muted', 'muted');
+      $video.prop('muted', true);
       $video.html('Your browser does not support HTML5 video.');
       $video.attr('playsinline', 'playsinline'); // needed by iOS
       $video[0].load(); // needed by iOS
