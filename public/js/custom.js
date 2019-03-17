@@ -615,12 +615,14 @@ if (!String.prototype.endsWith) {
     }
 
     function saveErrorResponse(error) {
+      if (checked) return;
       responses.push({
         response: null,
         startMsec: videoStartMsec,
         durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec),
         error: error
       });
+      checked = true;
     }
 
     /**
@@ -629,7 +631,6 @@ if (!String.prototype.endsWith) {
      */
     function skipOnError(error) {
       saveErrorResponse(error);
-      checked = true;
       playNextVideo();
       numSkipsInRow += 1;
     }
