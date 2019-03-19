@@ -1,10 +1,10 @@
 const request = require('supertest');
 const debug = require('debug')('memento:server');
 const assert = require('assert');
-const app = require('../app');
-const config = require('../config');
-const { pool, initDB } = require('../database/database');
-const { getSeqTemplate } = require('../utils/sequence');
+const app = require('../api/app');
+const config = require('../api/config');
+const { pool, initDB } = require('../api/database/database');
+const { getSeqTemplate } = require('../api/utils/sequence');
 const {
     getVideos,
     saveResponses,

@@ -3,12 +3,12 @@
 /**
  * Module dependencies.
  */
-const app = require('../app');
 const debug = require('debug')('memento:server');
 const http = require('http');
-const { initDB } = require('../database/database');
-const { fixLabelCounts } = require('../database/dbops');
-const config = require('../config');
+const app = require('../api/app');
+const config = require('../api/config');
+const { initDB } = require('../api/database/database');
+const { fixLabelCounts } = require('../api/database/dbops');
 
 /**
  * Normalize a port into a number, string, or false.
