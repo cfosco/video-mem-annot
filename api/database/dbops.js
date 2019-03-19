@@ -183,8 +183,8 @@ async function getVideos(data, seqTemplate) {
 
   // select fillers by taking the first nFillers vids from the set difference
   // targetVids - randomVids
-  const targetsSet = new Set(targetVids.map(({ id, uri }) => id));
-  const potentialFillers = randomVids.filter(({ id, uri }) => !targetsSet.has(id));
+  const targetsSet = new Set(targetVids.map(({ id }) => id));
+  const potentialFillers = randomVids.filter(({ id }) => !targetsSet.has(id));
 
   if (potentialFillers.length < nFillers || targetVids.length < nTargets) {
     throw new OutOfVidsError(workerID);
@@ -248,7 +248,7 @@ async function getVideos(data, seqTemplate) {
     )];
 
     const targetIds = ordering
-      .filter(([index, type]) => type === VID_TYPES.TARGET)
+      .filter((vid) => vid[1] === VID_TYPES.TARGET)
       .map(([index]) => vidsToShow[index].id);
     if (targetIds.length > 0) {
       const targetUpdatesQuery = 'UPDATE videos SET labels = labels + 1  WHERE id = ?;'
@@ -281,17 +281,17 @@ function calcScores(presentations) {
   const numVigRight = vigilancePresentations.filter(right).length;
   const numNonDuplicate = presentations.filter(nonDuplicate).length;
 
-  falsePositiveRate = numNonDuplicate == 0
+  const falsePositiveRate = numNonDuplicate == 0
     ? 0
     : presentations.filter(falsePositive).length / numNonDuplicate;
-  overallScore = numAll == 0
+  const overallScore = numAll == 0
     ? 1
     : numRight / numAll;
-  vigilanceScore = numVig == 0
+  const vigilanceScore = numVig == 0
     ? 1
     : numVigRight / numVig;
 
-  passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);
+  const passed = didPassLevel(overallScore, vigilanceScore, falsePositiveRate);
 
   return { passed, overallScore, vigilanceScore, falsePositiveRate }
 
@@ -444,7 +444,7 @@ async function saveResponses(
     passed = calc.passed;
     overallScore = calc.overallScore;
     vigilanceScore = calc.vigilanceScore;
-    falsePositiveRate = calc.falsePositiveRate;
+    const falsePositiveRate = calc.falsePositiveRate;
     await connection.query('UPDATE levels SET score = ?, vig_score = ?, false_pos_rate = ?, reward = ? WHERE id = ?', [overallScore, vigilanceScore, falsePositiveRate, reward, levelID]);
 
     // update num lives

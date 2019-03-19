@@ -1,3 +1,10 @@
+/*
+stylelint is used to enforce browser support
+we disable it for specific lines when we know better
+viewport units are fine except for vmax
+flexbox is fine except for flex: number; shorthand
+*/
+
 /* IMO border-box is more intuitive and should be the default */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -5,8 +12,8 @@
 
 /* make the page take up the whole page */
 html, body {
-  width: 100vw;
-  min-height: 100vh;
+  width: 100vw; /* stylelint-disable-line plugin/no-unsupported-browser-features */
+  min-height: 100vh; /* stylelint-disable-line plugin/no-unsupported-browser-features */
 }
 
 #app {
@@ -23,12 +30,33 @@ html, body {
   padding:10px;
 }
 
+/* we need to show all videos with the same viewport
+we do this by having a smaller container with hidden overflow */
+#video_container {
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  /* video size may exceed the container: hide the excess */
+  overflow: hidden;
+  /* allow video to stretch to fill */
+  position: relative;
+}
+
+#video_container video {
+  /* picture fill whole element without stretching (cropping if necessary) */
+  /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
+  object-fit: cover; /* polyfilled */
+  position: absolute;
+  top: 0; bottom: 0; left: 0; right: 0;
+  width: 100%;
+  height: 100%;
+}
+
 /* must be flex with height 100vh to push disclaimer to bottom */
 #instructions {
   padding: 16px;
-  display: flex;
+  display: flex; /* stylelint-disable-line plugin/no-unsupported-browser-features */
   flex-direction: column;
-  min-height: 100vh;
+  min-height: 100vh; /* stylelint-disable-line plugin/no-unsupported-browser-features */
 }
 
 #instructions #sample-video {
@@ -55,13 +83,14 @@ html, body {
 
 /* needed to prevent scrolling for some reason */
 #custom-experiment, #main-interface {
-  max-height: 100vh;
+  max-height: 100vh; /* stylelint-disable-line plugin/no-unsupported-browser-features */
 }
 
 /* padding determines border (on right/wrong) thickness */
 #main-interface {
   padding: 16px;
-  border-radius: 10px;
+  /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
+  border-radius: 10px; /* cosmetic */
   background-color: none;
 }
 
@@ -70,29 +99,10 @@ html, body {
   width: 100%;
   /* 45px is the sum of the padding and progressbar height */
   /* 1.777 is 16/9 */
+  /* empircally, this use of calc seems fine in IE */
+  /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
   max-width: calc((100vh - 45px) * 1.777);
   margin: 0 auto; /* center */
-}
-
-/* we need to show all videos with the same viewport
-we do this by having a smaller container with hidden overflow */
-#video_container {
-  width: 100%;
-  padding-bottom: 56.25%; /* 16:9 aspect ratio */
-  /* video size may exceed the container: hide the excess */
-  overflow: hidden;
-  /* allow video to stretch to fill */
-  position: relative;
-}
-
-#video_container video {
-  /* picture fill whole element without stretching (cropping if necessary) */
-  object-fit: cover;
-  font-family: 'object-fit: cover;'; /* polyfill */
-  position: absolute;
-  top: 0; bottom: 0; left: 0; right: 0;
-  width: 100%;
-  height: 100%;
 }
 
 #progress-bar {
@@ -105,18 +115,19 @@ we do this by having a smaller container with hidden overflow */
 }
 
 .graph-header {
-  font-size: 1.5rem;
+  font-size: 24px;
 }
 
 .graph-container {
-  display: flex;
+  display: flex;  /* stylelint-disable-line plugin/no-unsupported-browser-features */
   align-items: center;
   justify-content: center;
   flex-flow: wrap;
 }
 
 .graph {
-  border-radius: 10px;
+  /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
+  border-radius: 10px; /* cosmetic */
   margin: 20px;
   margin-top:5px;
 }
@@ -143,18 +154,13 @@ we do this by having a smaller container with hidden overflow */
 
 .overlay {
   fill: none;
-  pointer-events: all;
+  /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
+  pointer-events: all; /* adds non-critical interaction */
 }
 
 .focus {
   fill: lightgrey;
   stroke: black;
-}
-
-.radial-progress __text {
-  font-family: Arial, sans-serif;
-  font-size: 40em !important;
-  font-weight: bold;
 }
 
 .results-text {

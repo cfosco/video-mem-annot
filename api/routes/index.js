@@ -41,7 +41,6 @@ function respondToError(err, res) {
 router.get('/users/:id', (req, res) => {
   getUserInfo(req.params.id)
     .then(body => {
-      console.log('body', body);
       res.send(body);
     })
     .catch((err) => {
