@@ -3,6 +3,7 @@
  * by some target browsers
  */
 
+import 'babel-polyfill';
 import 'url-search-params-polyfill';
 import 'objectFitPolyfill'; // adds window.objectFitPolyfill
 
