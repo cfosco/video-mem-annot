@@ -3,18 +3,9 @@
  * by some target browsers
  */
 
-import 'babel-polyfill';
+import '@babel/polyfill';
 import 'url-search-params-polyfill';
 import 'objectFitPolyfill'; // adds window.objectFitPolyfill
-
-if (!String.prototype.endsWith) {
-  String.prototype.endsWith = function(search, this_len) {
-      if (this_len === undefined || this_len > this.length) {
-          this_len = this.length;
-      }
-      return this.substring(this_len - search.length, this_len) === search;
-  };
-}
 
 // add playing property to video elements
 // okay, this isn't part of the spec, but it's useful

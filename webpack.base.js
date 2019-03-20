@@ -13,6 +13,7 @@ const config = {
   module: {
     // allows us to write modern js
     // babel converts it to old js that IE can run
+    // useBuiltIns uses @babel/polyfill to polyfill any ES6+ methods used
     rules: [
       {
         test: /\.js$/,
@@ -20,17 +21,24 @@ const config = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env']
-          }
-        }
-      }
+            presets: [
+              [
+                '@babel/preset-env',
+                {
+                  useBuiltIns: 'entry'
+                },
+              ],
+            ],
+          },
+        },
+      },
     ],
   },
   // semantic ui expects a global jquery so we import jquery with a script tag
   // this tells webpack to ignore jquery imports
   externals: {
     "jquery": "jQuery",
-  }
+  },
 };
 
 module.exports = config;
