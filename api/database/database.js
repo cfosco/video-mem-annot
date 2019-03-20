@@ -19,7 +19,12 @@ async function initDB(populateVideos=true) {
   }
 
   try {
-    videoURLs = JSON.parse(fs.readFileSync(path.join(__dirname, 'clean_10k.json'), 'utf8'));
+    videoURLs = JSON.parse(
+      fs.readFileSync(
+        path.join(__dirname, '..', '..', 'task_data', 'video_datasets', config.dataset + '.json'),
+        'utf8'
+      )
+    );
   } catch (e) {
     debug(e);
     debug('Could not read videos file. Database may not contain videos.');

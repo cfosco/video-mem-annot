@@ -27,7 +27,6 @@ import $ from 'jquery'; // with color plugin
  */
 
 // constants
-const BASE_PATH_VIDEOS = "https://data.csail.mit.edu/soundnet/actions3/";
 const VID_TYPES = {
   TARGET_REPEAT: "target_repeat",
   VIG_REPEAT: "vig_repeat",
@@ -251,7 +250,7 @@ export default function showTask(videos, onDone) {
    */
   function newVideo(video) {
     const $video = $("<video></video>");
-    $video.attr('src', BASE_PATH_VIDEOS + video.url);
+    $video.attr('src', video.url);
     $video.attr('controls', null);
     $video.data('vidType', video.type);
     $video.prop('muted', true);

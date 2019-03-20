@@ -13,7 +13,6 @@ const config = {
   module: {
     // allows us to write modern js
     // babel converts it to old js that IE can run
-    // useBuiltIns uses @babel/polyfill to polyfill any ES6+ methods used
     rules: [
       {
         test: /\.js$/,

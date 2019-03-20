@@ -5,6 +5,8 @@ import { showError } from './errors';
 import showTask from './videos';
 import { showResultsPage } from './results';
 
+const BASE_PATH_VIDEOS = "https://data.csail.mit.edu/soundnet/actions3/";
+
 let taskStartMsec;
 let payload;
 
@@ -39,6 +41,14 @@ function getURLParams() {
 }
 
 /**
+ * Determine whether or not a URI starts with a protocol (e.g. http://)
+ * @param {string} uri 
+ */
+function startsWithProtocol(uri) {
+  return /^(f|ht)tps?:\/\//i.test(uri);
+}
+
+/**
  * Hide the instructions and start the task
  */
 function startTask() {
@@ -56,8 +66,12 @@ function startTask() {
     // that the data was not corrupted
     inputData = Object.freeze(res);
     levelID = inputData.levelID;
-    //$('.level-num').html(res.level);
-    showTask(inputData.videos, ({ responses, endReason }) => {
+    // add the base path unless a fully-qualified URL is already given
+    const videos = res.videos.map((video) => ({
+      url: startsWithProtocol(video.url) ? video.url : BASE_PATH_VIDEOS + video.url,
+      type: video.type
+    }));
+    showTask(videos, ({ responses, endReason }) => {
       payload = {
         responses,
         endReason,
