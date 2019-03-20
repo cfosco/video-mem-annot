@@ -302,7 +302,8 @@ async function saveResponses(
   reward = config.rewardAmount,
   levelsPerLife = N_LEVELS_PER_NEW_LIFE,
   errorOnFastSubmit = config.errorOnFastSubmit) {
-  const { workerID, levelID, responses, levelInputs, errorEnd } = data;
+  let { workerID, levelID, responses, levelInputs, endReason } = data;
+  endReason = endReason || 'done';
 
   await assertNotBlocked(workerID, true);
   const userID = await getUser(workerID);
@@ -334,7 +335,7 @@ async function saveResponses(
   const timeDiffMsec = new Date(nowTS).getTime() - new Date(levels[0].insert_time).getTime();
 
   // check that the submission is neither too fast nor too slow
-  if (errorOnFastSubmit && !errorEnd) {
+  if (errorOnFastSubmit && endReason === 'done') {
     // set the minTime to about 1s per video, which should be plenty
     const minTimeMsec = numBoolResponses * 1 * 1000;
     if (timeDiffMsec < minTimeMsec) {
@@ -388,7 +389,7 @@ async function saveResponses(
 
   let overallScore;
   let vigilanceScore;
-  let numLives;
+  let numLives = (await pool.query('SELECT num_lives FROM users WHERE id = ?', userID))[0].num_lives;
   let passed;
 
   // save the responses
@@ -428,13 +429,10 @@ async function saveResponses(
       );
     }
 
-    // if their game ended due to an error, don't mark as completed
-    if (errorEnd) return;
-
     // calcualate level number (before setting the score since that changes it)
     const levels = await pool.query('SELECT COUNT(*) AS levelsCount FROM levels '
-      + 'WHERE id_user = ? AND score IS NOT NULL'
-      , userID);
+      + 'WHERE id_user = ? AND score IS NOT NULL',
+      userID);
     const levelNum = levels[0].levelsCount + 1;
 
     // calculate and set score
@@ -445,12 +443,12 @@ async function saveResponses(
     overallScore = calc.overallScore;
     vigilanceScore = calc.vigilanceScore;
     const falsePositiveRate = calc.falsePositiveRate;
-    await connection.query('UPDATE levels SET score = ?, vig_score = ?, false_pos_rate = ?, reward = ? WHERE id = ?', [overallScore, vigilanceScore, falsePositiveRate, reward, levelID]);
+    await connection.query(
+      'UPDATE levels SET score = ?, vig_score = ?, false_pos_rate = ?, reward = ?, end_reason = ? WHERE id = ?',
+      [overallScore, vigilanceScore, falsePositiveRate, reward, endReason, levelID]);
 
     // update num lives
-    const livesQuery = await connection.query('SELECT num_lives FROM users WHERE id = ?', userID);
-    const oldLives = livesQuery[0].num_lives;
-    numLives = oldLives;
+    const oldLives = numLives;
     if (levelNum == 1) {
       if (passed) {
         numLives++;

@@ -1,5 +1,4 @@
 import $ from 'jquery'; // with color plugin
-import { showError, hideError } from './errors';
 
 /**
  * @typedef Video
@@ -21,6 +20,10 @@ import { showError, hideError } from './errors';
  * @prop {number} [code] - numeric error code
  * @prop {string} [text] - description of the error
  * @prop {string} [where] - what function the error was thrown in
+ */
+
+/**
+ * @enum { 'done' | 'error' | 'fail' } EndReason
  */
 
 // constants
@@ -47,6 +50,8 @@ const REQ_ACCURACIES = {
 }
 // time range in which you can fail early, in seconds
 const FAIL_EARLY_ELIGIBLE = [30, 120];
+// if the video takes longer than this to finish we assume it freezed
+const MAX_LOAD_MSEC = 15000;
 
 /**
  * @return {boolean} whether or not the video is a repeat
@@ -60,48 +65,10 @@ function isRepeat($video) {
 }
 
 /**
- * Tells the user to check their network
- * Starts a retry loop
- */
-function networkError($video, retryFn) {
-  const error = $video[0].error;
-  const headerText = "Network Error";
-  const bodyHTML = "<b>Don't refresh the page!</b>."
-    + " The video could not be loaded, probably due to a problem with your connection."
-    + " The game will automatically resume when the problem is resolved."
-    + " If you are able to access other websites but the game is still broken,"
-    + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
-    + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
-    + "<br><b>Video url: </b>" + $video.attr('src')
-    + "<br><b>Error code: </b>" + error.code
-    + "<br><b>Error message: </b>" + error.message;
-  showError(bodyHTML, headerText);
-  setTimeout(() => {
-    $video[0].load();
-    retryFn();
-  }, 3000);
-}
-
-/**
- * Tells the user to try a different browser or email us
- * The level cannot be continued at this point
- */
-function unknownError($video, error) {
-  const headerText = "Unkown Error";
-  const bodyHTML = "There was an error playing this video."
-    + ' If you just started the game, please try a different browser. Otherwise,'
-    + ' send an email to <a href="mailto:mementomturk@gmail.com">mementomturk@gmail.com</a>'
-    + " along with your Worker and Assignment IDs and a screenshot or text copy of this message."
-    + " "
-    + "<br><b>Video url: </b>" + $video.attr('src');
-    + "<br><b>Error code: </b>" + error.code
-    + "<br><b>Error message: </b>" + error.message;
-  showError(bodyHTML, headerText);
-}
-
-/**
+ * Runs the memento game
+ * Calls a callback with the user's responses when done
  * @param {Video[]} videos 
- * @param {*} onDone 
+ * @param {({ responses: Response[], endReason: EndReason }) => void} onDone 
  */
 export default function showTask(videos, onDone) {
   // get DOM references
@@ -113,8 +80,9 @@ export default function showTask(videos, onDone) {
   const videoElements = []; // jQuery video elements
   let counter = 0; // index in transcripts of next video to load
   let checked = false; // don't check video at end if already checked
-  let gameStartMsec; // when the first video started playing (absolute)
-  let videoStartMsec; // when the current video started playing, relative to game start
+  const gameStartMsecDefault = (new Date).getTime(); // a default is needed in case a video never loads
+  let gameStartMsec = gameStartMsecDefault; // when the first video started playing (absolute)
+  let videoStartMsec = 0; // when the current video started playing, relative to game start
   let numSkipsInRow = 0; // we skip videos sometimes to dodge bugs but need to limit this
 
   // task data
@@ -125,9 +93,15 @@ export default function showTask(videos, onDone) {
    * Signal the end of the task, passing task data to the callback
    */
   function submitData() {
+    let endReason = 'done';
+    if (errorEnd) {
+      endReason = 'error';
+    } else if (responses.length < videos.length) {
+      endReason = 'fail';
+    }
     onDone({
       responses,
-      errorEnd
+      endReason
     });
   }
 
@@ -312,16 +286,19 @@ export default function showTask(videos, onDone) {
           where: 'playWhenReady'
         });
       } else {
-        networkError($video, playIfReady);
+        // network error -- repeatedly try to reload
+        setTimeout(() => {
+          $video[0].load();
+          playIfReady();
+        }, 3000);
       }
     }
 
     function playIfReady() {
       if ($video[0].readyState == 4) {
-        hideError();
         $("#vid-loading-dimmer").addClass('disabled').removeClass('active');
         $video.css('visibility', 'visible');
-        if (gameStartMsec === undefined) {
+        if (gameStartMsec === gameStartMsecDefault) {
           gameStartMsec = (new Date()).getTime();
         }
         videoStartMsec = (new Date()).getTime() - gameStartMsec;
@@ -335,7 +312,6 @@ export default function showTask(videos, onDone) {
                 where: 'playIfReady -> video.play'
               });
             } else {
-              unknownError($video, err);
               saveErrorResponse({
                 code: err.code,
                 text: err.message,
@@ -357,6 +333,24 @@ export default function showTask(videos, onDone) {
     $video.on('error', onError);
     $video.on('canplaythrough', playIfReady);
     playIfReady();
+
+    // detect frozen video
+    setTimeout(() => {
+      if (videoElements[0] === $video) {
+        const err = {
+          code: 0,
+          text: 'The video froze',
+          where: 'playWhenReady -> setTimeout'
+        };
+        if (numSkipsInRow < MAX_SKIPS_IN_ROW) {
+          skipOnError(err);
+        } else {
+          saveErrorResponse(err);
+          errorEnd = true;
+          submitData();
+        }
+      }
+    }, MAX_LOAD_MSEC);
   }
 
   // HANDLE KEYPRESS (Spacebar)

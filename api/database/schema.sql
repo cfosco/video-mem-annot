@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS levels (
   browser VARCHAR(32) NOT NULL,
   browser_version VARCHAR(32) NOT NULL,
   os VARCHAR(32) NOT NULL,
-  device_type VARCHAR(8) NOT NULL
+  device_type ENUM('desktop', 'tablet', 'mobile', 'unknown') NOT NULL,
+  end_reason ENUM('done', 'fail', 'error')
 );
 
 CREATE TABLE IF NOT EXISTS presentations (

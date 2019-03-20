@@ -57,10 +57,10 @@ function startTask() {
     inputData = Object.freeze(res);
     levelID = inputData.levelID;
     //$('.level-num').html(res.level);
-    showTask(inputData.videos, ({ responses, errorEnd }) => {
+    showTask(inputData.videos, ({ responses, endReason }) => {
       payload = {
         responses,
-        errorEnd,
+        endReason,
         levelID,
         inputData,
         workerID: workerId,
@@ -71,9 +71,8 @@ function startTask() {
         contentType: 'application/json; charset=utf-8',
         dataType: 'json'
       }).done((data) => {
-        if (!errorEnd) {
-          showResultsPage(data, responses.length < inputData.videos.length);
-        }
+        $('#submit-button').click(submitHIT);
+        showResultsPage(data, endReason);
       })
       .catch((err) => {
         payload.err = err;
@@ -158,6 +157,5 @@ $(document).ready(function () {
     // set up buttons
     $('#start-button').show();
     $('#start-button').click(startTask);
-    $('#submit-button').click(submitHIT);
   }
 });

@@ -87,7 +87,7 @@ router.post('/end', (req, res) => {
     levelID: req.body.levelID,
     responses: req.body.responses,
     levelInputs: req.body.inputs,
-    errorEnd: req.body.errorEnd
+    endReason: req.body.endReason
   };
   saveResponses(args)
     .then(body => res.send(body))
