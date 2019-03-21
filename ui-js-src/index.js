@@ -4,6 +4,7 @@ import $ from 'jquery';
 import { showError } from './errors';
 import showTask from './videos';
 import { showResultsPage } from './results';
+import { now } from './utils';
 
 const BASE_PATH_VIDEOS = "https://data.csail.mit.edu/soundnet/actions3/";
 
@@ -131,7 +132,7 @@ function submitHIT() {
     url: 'api/submit',
     data: JSON.stringify({
       levelID: levelID,
-      taskTimeMsec: (new Date()).getTime() - taskStartMsec,
+      taskTimeMsec: now() - taskStartMsec,
       feedback: feedback
     }),
     contentType: 'application/json; charset=utf-8',
@@ -152,7 +153,7 @@ function submitHIT() {
 
 // show the instructions page
 $(document).ready(function () {
-  taskStartMsec = (new Date()).getTime();
+  taskStartMsec = now();
   getURLParams();
 
   if (assignmentId == "ASSIGNMENT_ID_NOT_AVAILABLE") {

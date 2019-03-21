@@ -1,4 +1,5 @@
 import $ from 'jquery'; // with color plugin
+import { now } from './utils';
 
 /**
  * @typedef Video
@@ -83,6 +84,7 @@ export default function showTask(videos, onDone) {
   let gameStartMsec = gameStartMsecDefault; // when the first video started playing (absolute)
   let videoStartMsec = 0; // when the current video started playing, relative to game start
   let numSkipsInRow = 0; // we skip videos sometimes to dodge bugs but need to limit this
+  let done = false;
 
   // task data
   const responses = [];
@@ -92,6 +94,8 @@ export default function showTask(videos, onDone) {
    * Signal the end of the task, passing task data to the callback
    */
   function submitData() {
+    if (done) return;
+    done = true;
     let endReason = 'done';
     if (errorEnd) {
       endReason = 'error';
@@ -132,7 +136,7 @@ export default function showTask(videos, onDone) {
         || vigFrac[0] / vigFrac[1] < REQ_ACCURACIES.PREFIX_NON_REPEAT
       );
     }
-    const gameTimeMsec = (new Date()).getTime() - gameStartMsec;
+    const gameTimeMsec = now() - gameStartMsec;
     if (gameTimeMsec > FAIL_EARLY_ELIGIBLE[0] * 1000 && gameTimeMsec < FAIL_EARLY_ELIGIBLE[1] * 1000) {
       const nonDupFrac = [VID_TYPES.FILLER, VID_TYPES.TARGET, VID_TYPES.VIG]
         .reduce((frac, key) => {
@@ -158,7 +162,7 @@ export default function showTask(videos, onDone) {
     responses.push({
       response: response,
       startMsec: videoStartMsec,
-      durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec)
+      durationMsec: now() - (videoStartMsec + gameStartMsec)
     });
     const right = isRepeat($video) === response;
     updateFrac(fracs[$video.data('vidType')], right);
@@ -193,7 +197,7 @@ export default function showTask(videos, onDone) {
     responses.push({
       response: null,
       startMsec: videoStartMsec,
-      durationMsec: (new Date()).getTime() - (videoStartMsec + gameStartMsec),
+      durationMsec: now() - (videoStartMsec + gameStartMsec),
       error: error
     });
   }
@@ -298,9 +302,9 @@ export default function showTask(videos, onDone) {
         $("#vid-loading-dimmer").addClass('disabled').removeClass('active');
         $video.css('visibility', 'visible');
         if (gameStartMsec === gameStartMsecDefault) {
-          gameStartMsec = (new Date()).getTime();
+          gameStartMsec = now();
         }
-        videoStartMsec = (new Date()).getTime() - gameStartMsec;
+        videoStartMsec = now() - gameStartMsec;
         const playPromise = $video[0].play();
         if (playPromise) {
           playPromise.catch((err) => {
