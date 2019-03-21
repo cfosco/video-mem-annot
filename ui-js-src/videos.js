@@ -40,6 +40,7 @@ const VID_TYPES = {
 const NUM_LOAD_AHEAD = 4;
 const MAX_SKIPS_IN_ROW = 3;
 const VID_CHANGE_LAG_MSEC = 200;
+const MAX_VID_DUR_SEC = 3;
 
 // settings for vigilance checks
 const REQ_ACCURACIES = {
@@ -221,6 +222,7 @@ export default function showTask(videos, onDone) {
     // remove current video
     const $oldVideo = videoElements[0];
     $oldVideo.off('ended'); // sometimes it gets called again
+    $oldVideo.off('timeupdate');
     $oldVideo.remove();
 
     if (earlyFail()) {
@@ -266,11 +268,18 @@ export default function showTask(videos, onDone) {
     window.objectFitPolyfill($video); // polyfill
     videoElements.push($video);
 
+    // handle video end (some videos are slightly less than 3sec)
     $video.on('ended', () => {
       // check for missed repeat
       handleCheck(false, false);
       // remove active video
       playNextVideo();
+    });
+    // handle video end (some videos are more than 3sec)
+    $video.on('timeupdate', () => {
+      if ($video[0].currentTime >= MAX_VID_DUR_SEC) {
+        $video.trigger('ended');
+      }
     });
   }
 
