@@ -77,7 +77,7 @@ function startTask() {
         responses,
         endReason,
         levelID,
-        inputData,
+        inputs: inputData,
         workerID: workerId,
       };
       $.post({

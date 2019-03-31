@@ -7,7 +7,7 @@ This is a JavaScript project, so you need to have `node` and `npm` installed, an
 
 You need to get the `clean_10k.json` dataset file and put it in `task_data/video_datasets`. If you do not have this file and want to test the app, you can edit `api/config.js` and change `clean_10k` to `videomem_300`.
 
-## Mandatory Environment Variables
+## Environment Variables
 The server expects the following environment variables to be set (see `api/config.js`).
 - `MYSQL_HOST`
 - `MYSQL_USER`
@@ -16,6 +16,7 @@ The server expects the following environment variables to be set (see `api/confi
     - set to `test` automatically when running the tests
     - the database name is ``memento_${MEMENTO_ENV}``
     - used to pick a config from `api/config.js`
+- `USE_SHORT_SEQUENCE` (optional): if `true`, the video stream will only have 4 videos (for debugging)
 
 ## Commands
 - `npm run dev` run the app; webpack compiles the code every time you save a file
@@ -36,8 +37,7 @@ The first time you do this, add `export FOREVER_ROOT=/data/vision/oliva/scratch/
 1. `npx forever stop memento-prod` stop the server
 2. `git pull` get the changes
 3. `npm i` install any new dependencies
-4. `npm run build` recompile the code
-5. `./startforever.sh` start the server
+4. `./startforever.sh` build and start the server
 
 ## Browser Support
 After making a change, do `npm run lint` to check browser compatability. If you get a JS warning, you need to install a polyfill, import it in `ui-js-src/polyfills.js`, and list it in `ui-js-src/.eslintrc.json`. If you get a CSS warning, figure out if it matters (it warns if something is partially supported, but often the part you are using is supported; other times, the style is purely cosmetic). If it does matter, either use a different style or add a polyfill. Either way, add a `stylelint-disable` comment with an explanation. If you add a dependency, run a test in IE 11 to make sure nothing broke, as the linter does not look at third-party code.

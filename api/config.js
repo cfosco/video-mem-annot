@@ -21,8 +21,8 @@ const dev = {
     database: 'memento_dev',
   },
   enableBlockUsers: false,
-  errorOnFastSubmit: false,
-  enforceSameInputs: false,
+  errorOnFastSubmit: true,
+  enforceSameInputs: true,
 }
 
 const test = {
