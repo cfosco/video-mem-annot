@@ -226,7 +226,7 @@ export default function showTask(videos, onDone) {
     $oldVideo.remove();
 
     if (earlyFail()) {
-      submitData();
+      submitData(); // fail
       return;
     }
 
@@ -246,7 +246,7 @@ export default function showTask(videos, onDone) {
       $progressBar.progress("set progress", counter - NUM_LOAD_AHEAD);
       // update state
     } else {
-      submitData();
+      submitData(); // done
     }
   }
 
@@ -288,7 +288,10 @@ export default function showTask(videos, onDone) {
    * @param {$.Element<HTMLVideoElement>} $video 
    */
   function playWhenReady($video) {
+    let playing = false;
+
     function onError() {
+      playing = false;
       const error = $video[0].error;
       const maybeBadVideo = error.code !== MediaError.MEDIA_ERR_NETWORK;
       if (maybeBadVideo && numSkipsInRow < MAX_SKIPS_IN_ROW) {
@@ -308,6 +311,7 @@ export default function showTask(videos, onDone) {
 
     function playIfReady() {
       if ($video[0].readyState == 4) {
+        playing = true;
         $("#vid-loading-dimmer").addClass('disabled').removeClass('active');
         $video.css('visibility', 'visible');
         if (gameStartMsec === gameStartMsecDefault) {
@@ -315,8 +319,9 @@ export default function showTask(videos, onDone) {
         }
         videoStartMsec = now() - gameStartMsec;
         const playPromise = $video[0].play();
-        if (playPromise) {
+        if (playPromise) { // IE returns nothing
           playPromise.catch((err) => {
+            playing = false;
             if (numSkipsInRow < MAX_SKIPS_IN_ROW) {
               skipOnError({
                 code: err.code,
@@ -330,7 +335,7 @@ export default function showTask(videos, onDone) {
                 where: 'playIfReady -> video.play'
               });
               errorEnd = true;
-              submitData();
+              submitData(); // error
             }
           });
         }
@@ -342,12 +347,7 @@ export default function showTask(videos, onDone) {
       }
     }
 
-    $video.on('error', onError);
-    $video.on('canplaythrough', playIfReady);
-    playIfReady();
-
-    // detect frozen video
-    setTimeout(() => {
+    function detectFreeze() {
       if (videoElements[0] === $video) {
         const err = {
           code: 0,
@@ -357,12 +357,29 @@ export default function showTask(videos, onDone) {
         if (numSkipsInRow < MAX_SKIPS_IN_ROW) {
           skipOnError(err);
         } else {
-          saveErrorResponse(err);
-          errorEnd = true;
-          submitData();
+          $.get({
+            url: '/api',
+            timeout: 3000
+          }) // check if we can reach the server
+            .then(() => { // we can: we got too many bad videos in a row, so end the game
+              if (!playing) { // if video has started playing, we don't want to fail
+                saveErrorResponse(err);
+                errorEnd = true;
+                submitData(); // error
+              }
+            })
+            .catch(() => { // we can't: keep waiting for network to come back
+              $video[0].load();
+              setTimeout(detectFreeze, MAX_LOAD_MSEC);
+            });
         }
       }
-    }, MAX_LOAD_MSEC);
+    }
+
+    $video.on('error', onError);
+    $video.on('canplaythrough', playIfReady);
+    playIfReady();
+    setTimeout(detectFreeze, MAX_LOAD_MSEC);
   }
 
   // HANDLE KEYPRESS (Spacebar)
