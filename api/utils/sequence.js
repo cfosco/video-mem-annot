@@ -10,7 +10,7 @@ function randIntInRange(low, high) {
 function getSeqTemplate(useShortSequence) {
     const dirName = useShortSequence ? 'short_level_templates' : 'level_templates';
     try {
-        const dirPath = path.join(__dirname, '..', 'task_data', dirName);
+        const dirPath = path.join(__dirname, '..', '..', 'task_data', dirName);
         const files = fs.readdirSync(dirPath).filter((f) => f.endsWith('.json'));
         let templateNum = randIntInRange(0, files.length-1);
         let templateFile = files[templateNum];

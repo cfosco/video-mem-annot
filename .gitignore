@@ -1,5 +1,4 @@
 mturk.log
 clean_10k.json
 node_modules
-*.tsv
-*.csv
+bundle.js

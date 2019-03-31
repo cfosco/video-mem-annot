@@ -3,6 +3,7 @@ const debug = require('debug')('memento:server');
 const configBase = {
   rewardAmount: 1,
   maxLevelTimeSec: 3600, // 1 hour
+  dataset: 'clean_10k',
 }
 
 const dbConfigBase = {

@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // create an append-only file stream to the log
-const logPath = path.join(__dirname, '..', 'logs', 'ui.log');
+const logPath = path.join(__dirname, '..', '..', 'logs', 'ui.log');
 const stream = fs.createWriteStream(logPath, {flags: "a"});
 
 function writeUILog(message) {

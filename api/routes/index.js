@@ -41,7 +41,6 @@ function respondToError(err, res) {
 router.get('/users/:id', (req, res) => {
   getUserInfo(req.params.id)
     .then(body => {
-      console.log('body', body);
       res.send(body);
     })
     .catch((err) => {
@@ -88,7 +87,7 @@ router.post('/end', (req, res) => {
     levelID: req.body.levelID,
     responses: req.body.responses,
     levelInputs: req.body.inputs,
-    errorEnd: req.body.errorEnd
+    endReason: req.body.endReason
   };
   saveResponses(args)
     .then(body => res.send(body))

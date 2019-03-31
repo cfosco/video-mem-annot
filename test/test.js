@@ -1,10 +1,10 @@
 const request = require('supertest');
 const debug = require('debug')('memento:server');
 const assert = require('assert');
-const app = require('../app');
-const config = require('../config');
-const { pool, initDB } = require('../database/database');
-const { getSeqTemplate } = require('../utils/sequence');
+const app = require('../api/app');
+const config = require('../api/config');
+const { pool, initDB } = require('../api/database/database');
+const { getSeqTemplate } = require('../api/utils/sequence');
 const {
     getVideos,
     saveResponses,
@@ -16,14 +16,14 @@ const {
     getUserInfo,
     submitLevel,
     fixLabelCounts
-} = require('../database/dbops');
+} = require('../api/database/dbops');
 // helper functions for use in tests
 
 const userAgentData = {
   browser: 'jest',
   browserVersion: '1',
   os: 'jest',
-  deviceType: 'jest'
+  deviceType: 'unknown'
 };
 
 function calcAnswers(videos, correct) {
@@ -108,10 +108,11 @@ async function checkThrowsError(asyncFunc, errorClass) {
 
 async function wipeDB (populateVideos) {
   for (let table of ['errors', 'presentations', 'levels', 'users', 'videos']) {
-    await pool.query('DROP TABLE ' + table)
-      .catch((e) => {
-        debug("error dropping table", e);
-      }) // don't care
+    try {
+      await pool.query('DROP TABLE ' + table);
+    } catch (e) {
+      debug("error dropping table", e);
+    }
   }
   await initDB(populateVideos);
 }
@@ -479,7 +480,7 @@ describe('Test save answers', () => {
     done();
   });
 
-  test('It should let you submit early with errors and not fail you', async (done) => {
+  test('It should let you submit early with errors and fail you', async (done) => {
     const username = 'testErrorEnd';
     let { answers, inputs } = await getVidsAndMakeAnswers(username);
     answers = answers.slice(10);
@@ -498,11 +499,11 @@ describe('Test save answers', () => {
       levelID: inputs.levelID,
       responses: answers,
       levelInputs: inputs,
-      errorEnd: true
+      endReason: 'error'
     }, .5);
-    expect(numLives).toBe(undefined);
-    expect(passed).toBe(undefined);
-    expect(completedLevels).toHaveLength(0);
+    expect(numLives).toBe(0);
+    expect(passed).toBe(false);
+    expect(completedLevels).toHaveLength(1);
     done();
   });
 });
