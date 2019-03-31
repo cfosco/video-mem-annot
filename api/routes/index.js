@@ -31,9 +31,16 @@ function respondToError(err, res) {
     res.send(400, err.message);
   } else {
     debug("500 error", err);
-    res.send(500);
+    res.sendStatus(500);
   }
 }
+
+/**
+ * Check that the API is running
+ */
+router.get('/', (req, res) => {
+  res.send({ ok: true });
+});
 
 /**
  * Get the level that a user is on and whether or not they are blocked
