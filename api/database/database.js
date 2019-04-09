@@ -5,8 +5,6 @@ const debug = require('debug')('memento:server');
 const config = require('../config');
 
 const pool = mysql.createPool(config.dbConfig);
-const MAXINT = Math.pow(2, 31) - 1;
-const MININT = -Math.pow(2, 31);
 
 async function initDB(populateVideos=true) {
   // read files for database schema and list of video urls
@@ -89,7 +87,5 @@ async function withinTX(callback) {
 module.exports = {
   pool,
   initDB,
-  withinTX, 
-  MAXINT, 
-  MININT
+  withinTX
 };

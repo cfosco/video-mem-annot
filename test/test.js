@@ -27,7 +27,7 @@ const userAgentData = {
 };
 
 function calcAnswers(videos, correct) {
-  const urls = new Set(); 
+  const urls = new Set();
   const answers = videos.map(vid => {
     const answer = urls.has(vid.url);
     urls.add(vid.url);
@@ -393,28 +393,6 @@ describe('Test save answers', () => {
     }, .5);
     expect(numLives).toEqual(0);
     expect(passed).toBe(false);
-    expect(completedLevels).toHaveLength(1);
-    done();
-  });
-
-  test('It should not break when you submit an invalid duration', async(done) => {
-    const username = 'testNegativeDuration'; 
-    let { answers, inputs } = await getVidsAndMakeAnswers(username);
-    // put a negative duration
-    answers[0].durationMsec = -100000000000000000000000000; 
-    answers[1].durationMsec = 100000000000000000000000000; 
-    const {
-      numLives,
-      passed,
-      completedLevels
-    } = await saveResponses({
-      workerID: username,
-      levelID: inputs.levelID,
-      responses: answers,
-      levelInputs: inputs
-    }, .5);
-    expect(numLives).toEqual(2);
-    expect(passed).toBe(true);
     expect(completedLevels).toHaveLength(1);
     done();
   });

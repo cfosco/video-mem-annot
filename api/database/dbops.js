@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const debug = require('debug')('memento:server');
 const assert = require('assert');
 
-const { pool, withinTX, MAXINT, MININT } = require('./database');
+const { pool, withinTX } = require('./database');
 const config = require('../config');
 const { secToHMS } = require('../utils/utils');
 
@@ -381,10 +381,6 @@ async function saveResponses(
       );
       assert(typeof (startMsec) === "number", "start time should be a number");
       assert(typeof (durationMsec) === "number", "duration should be a number");
-      if (!((durationMsec <= MAXINT) && (durationMsec >= MININT))) {
-        debug("WARNING: received invalid duration. Clipping to the range (-2^31, 2^31-1)")
-        elt.durationMsec = Math.min(MAXINT, Math.max(MININT, durationMsec));
-      }
     });
   } catch (error) {
     debug("Error while checking validity of inputs:", error);
