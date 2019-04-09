@@ -81,7 +81,7 @@ export default function showTask(videos, onDone) {
   const videoElements = []; // jQuery video elements
   let counter = 0; // index in transcripts of next video to load
   let checked = false; // don't check video at end if already checked
-  const gameStartMsecDefault = (new Date).getTime(); // a default is needed in case a video never loads
+  const gameStartMsecDefault = now(); // a default is needed in case a video never loads
   let gameStartMsec = gameStartMsecDefault; // when the first video started playing (absolute)
   let videoStartMsec = 0; // when the current video started playing, relative to game start
   let numSkipsInRow = 0; // we skip videos sometimes to dodge bugs but need to limit this
