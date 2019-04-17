@@ -44,7 +44,7 @@ export function showResultsPage(
   }
 
   if (endReason === 'error') {
-    livesMessage += "The game ended due to an error. Thank you for your participation.<br>";
+    livesMessage += "The game ended due to an error. Thank you for your participation. Your internet connection or device seems to be incompatible with the game, so you might not be allowed to accept another Memento HIT. We apologize for the inconvenience.<br>";
   }
   if (numLives <= 0) {
     livesMessage += "You have no lives left. You can no longer play the game.";
