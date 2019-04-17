@@ -52,6 +52,7 @@ export function showResultsPage(
   } else {
     const livesWord = numLives > 1 ? "lives" : "life";
     livesMessage = "You have " + numLives + " " + livesWord + " left";
+    livesMessage+="<br><b>You can do more of these HITs!</b> Please accept a new HIT to go to the next level."
     for (let i = 0; i < numLives; i++) {
       iconElts += '<i class="heart icon"></i>';
     }
