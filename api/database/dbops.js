@@ -14,10 +14,10 @@ const VID_TYPES = {
   FILLER: "filler",
 }
 
-const N_LEVELS_PER_NEW_LIFE = 50;
+const N_LEVELS_PER_NEW_LIFE = 10;
 
 const didPassLevel = function (overallScore, vigilanceScore, falsePositiveRate) {
-  return overallScore > .7 && vigilanceScore > .8 && falsePositiveRate < .5;
+  return vigilanceScore > .8 && falsePositiveRate < .5;
 }
 
 // Errors to be used in the API
