@@ -231,18 +231,26 @@ async function getVideos(data, seqTemplate) {
     connection.query('UPDATE levels SET inputs_hash = ? WHERE id = ?',
       [hashVal, levelID]);
 
+    const indexToLag = {};
+    ordering.forEach(([index, type], position) => {
+      if (type === VID_TYPES.TARGET) {
+        indexToLag[index] = position;
+      } else if (type === VID_TYPES.TARGET_REPEAT) {
+        indexToLag[index] = position - indexToLag[index];
+      }
+    });
     const presentationInserts = ordering.map(([index, type], position) => {
       const vigilance = type == VID_TYPES.VIG || type == VID_TYPES.VIG_REPEAT;
       const duplicate = type == VID_TYPES.VIG_REPEAT || type == VID_TYPES.TARGET_REPEAT;
       const targeted = type == VID_TYPES.TARGET || type == VID_TYPES.TARGET_REPEAT;
-      return [levelID, vidsToShow[index].id, position, vigilance, duplicate, targeted];
-    })
+      return [levelID, vidsToShow[index].id, position, vigilance, duplicate, targeted, indexToLag[index]];
+    });
     // position: index into the vid seq shown to user
     // vigilance: was this a 1st or 2nd repeat of a vig video?
     // duplicate: was this the second presentation of a video?
     // targeted: was this 1st or 2nd repeat of a target video?
     const promises = [connection.query('INSERT INTO presentations'
-      + ' (id_level, id_video, position, vigilance, duplicate, targeted)'
+      + ' (id_level, id_video, position, vigilance, duplicate, targeted, vids_since)'
       + ' VALUES ?',
       [presentationInserts]
     )];
