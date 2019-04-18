@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS presentations (
   response BOOLEAN,
   start_msec INT,
   duration_msec INT,
-  vids_since TINYINT
+  vids_since SMALLINT
 );
 
 CREATE TABLE IF NOT EXISTS errors (

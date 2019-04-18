@@ -244,7 +244,7 @@ async function getVideos(data, seqTemplate) {
       const duplicate = type == VID_TYPES.VIG_REPEAT || type == VID_TYPES.TARGET_REPEAT;
       const targeted = type == VID_TYPES.TARGET || type == VID_TYPES.TARGET_REPEAT;
       return [levelID, vidsToShow[index].id, position, vigilance, duplicate, targeted, indexToLag[index]];
-    })
+    });
     // position: index into the vid seq shown to user
     // vigilance: was this a 1st or 2nd repeat of a vig video?
     // duplicate: was this the second presentation of a video?
