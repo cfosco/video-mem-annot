@@ -36,7 +36,8 @@ function getSeqTemplate(useShortSequence) {
  * This method assumes the N targets have indexes [0,N)
  * This updates the ordering so that the lowest indexes
  *   have the highest spacing between target and target repeat
- * @param {*} ordering 
+ * @param {Array} ordering
+ * @return {number} how many indexes have lag >= 150
  */
 function orderIndexesByLag(ordering) {
   const indexToLag = {};
@@ -60,7 +61,8 @@ function orderIndexesByLag(ordering) {
       element[0] = indexToNewIndex[element[0]];
     }
   });
-  return ordering;
+  
+  return Object.values(indexToLag).filter(lag => lag >= 150).length;
 }
 
 module.exports = {

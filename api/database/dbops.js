@@ -112,11 +112,30 @@ LEFT JOIN (
 ON videos.id = T.id_video
 GROUP BY videos.id;`;
 
+const label150CountsQuery = `SELECT videos.id, count(T.id_video) as real_labels
+FROM videos
+LEFT JOIN (
+    SELECT presentations.id_video
+    FROM levels JOIN presentations
+    ON levels.id = presentations.id_level
+    WHERE presentations.vids_since >= 150 AND (
+        (levels.score IS NOT NULL
+        AND levels.vig_score > "${MIN_VIG_SCORE}"
+        AND levels.false_pos_rate < "${MAX_FPR}")
+    	OR 
+        (levels.score IS NULL
+        AND TIMEDIFF(CURRENT_TIMESTAMP, levels.insert_time) < "${durHMS}")
+    ) AND presentations.targeted = 1 AND presentations.duplicate = 1
+) as T
+ON videos.id = T.id_video
+GROUP BY videos.id;`;
+
   await withinTX(async (connection) => {
     const result = await connection.query(labelCountsQuery);
-    const targetUpdatesQuery = 'UPDATE videos SET labels = ? WHERE id = ?;'
+    const result150 = await connection.query(label150CountsQuery);
+    const targetUpdatesQuery = 'UPDATE videos SET labels = ?, labels_150 = ? WHERE id = ?;'
       .repeat(result.length);
-    const args = [].concat(...result.map((row) => [row.real_labels, row.id]));
+    const args = [].concat(...result.map((row, i) => [row.real_labels, result150[i].real_labels, row.id]));
     await connection.query(targetUpdatesQuery, args);
   });
 }
@@ -156,15 +175,28 @@ async function getVideos(data, seqTemplate) {
   const { workerID, browser, browserVersion, os, deviceType } = data;
 
   const [nTargets, nFillers, ordering] = seqTemplate;
-  orderIndexesByLag(ordering);
+  const nTargets150 = orderIndexesByLag(ordering);
   
   const numVideos = nTargets + nFillers;
 
   await assertNotBlocked(workerID, true);
   const userID = await getUser(workerID);
 
+  // select nTargets150 least-seen at lag >= 150 videos user hasn't seen yet
+  const targetVids150 = await pool.query('SELECT id, uri'
+    + ' FROM videos WHERE id NOT IN'
+    + ' (SELECT id_video FROM levels '
+    + 'JOIN presentations ON levels.id = presentations.id_level '
+    + 'WHERE id_user = ?)'
+    + ' ORDER BY labels_150 ASC LIMIT ?',
+    [userID, nTargets150]
+  );
+
+  // running set of videos that have been used since queries are not disjoint
+  const usedVids = new Set(targetVids150.map(({ id }) => id));
+
   // select nTargets least-seen videos user hasn't seen yet
-  const targetVids = await pool.query('SELECT id, uri'
+  let targetVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
     + ' (SELECT id_video FROM levels '
     + 'JOIN presentations ON levels.id = presentations.id_level '
@@ -173,8 +205,12 @@ async function getVideos(data, seqTemplate) {
     [userID, nTargets]
   );
 
+  targetVids = targetVids.filter(({ id }) => !usedVids.has(id))
+    .slice(0, nTargets - nTargets150);
+  targetVids.forEach(({ id }) => usedVids.add(id));
+
   // select numVideos vids that user hasn't seen yet randomly
-  const randomVids = await pool.query('SELECT id, uri'
+  let fillerVids = await pool.query('SELECT id, uri'
     + ' FROM videos WHERE id NOT IN'
     + ' (SELECT id_video FROM levels '
     + 'JOIN presentations ON levels.id = presentations.id_level '
@@ -182,17 +218,16 @@ async function getVideos(data, seqTemplate) {
     + ' ORDER BY RAND() LIMIT ?',
     [userID, numVideos]
   );
+  fillerVids = fillerVids.filter(({ id }) => !usedVids.has(id))
+    .slice(0, nFillers);
 
-  // select fillers by taking the first nFillers vids from the set difference
-  // targetVids - randomVids
-  const targetsSet = new Set(targetVids.map(({ id }) => id));
-  const potentialFillers = randomVids.filter(({ id }) => !targetsSet.has(id));
-
-  if (potentialFillers.length < nFillers || targetVids.length < nTargets) {
+  if (
+    fillerVids.length < nFillers
+    || (targetVids.length + targetVids150.length) < nTargets
+    ) {
     throw new OutOfVidsError(workerID);
   }
-  const fillerVids = potentialFillers.slice(0, nFillers);
-  const vidsToShow = targetVids.concat(fillerVids);
+  const vidsToShow = [...targetVids150, ...targetVids, ...fillerVids];
 
   // prepare SQL to insert level
   let sqlFields = "id_user, browser, browser_version, os, device_type";
@@ -257,14 +292,27 @@ async function getVideos(data, seqTemplate) {
       [presentationInserts]
     )];
 
-    const targetIds = ordering
-      .filter((vid) => vid[1] === VID_TYPES.TARGET)
-      .map(([index]) => vidsToShow[index].id);
-    if (targetIds.length > 0) {
-      const targetUpdatesQuery = 'UPDATE videos SET labels = labels + 1  WHERE id = ?;'
-        .repeat(targetIds.length);
+    // update label counts
+    const targetUpdatesQuery = 'UPDATE videos SET labels = labels + 1  WHERE id = ?;'
+      .repeat(nTargets);
+    if (targetUpdatesQuery) {
+      const targetIds = [];
+      for (let i = 0; i < nTargets; i += 1) {
+        targetIds.push(vidsToShow[i].id);
+      }
       promises.push(connection.query(targetUpdatesQuery, targetIds));
     }
+
+    const targetUpdatesQuery150 = 'UPDATE videos SET labels_150 = labels_150 + 1  WHERE id = ?;'
+      .repeat(nTargets150);
+    if (targetUpdatesQuery150) {
+      const targetIds150 = [];
+      for (let i = 0; i < nTargets150; i += 1) {
+        targetIds150.push(vidsToShow[i].id);
+      }
+      promises.push(connection.query(targetUpdatesQuery150, targetIds150));
+    }
+
     await Promise.all(promises);
   });
 
