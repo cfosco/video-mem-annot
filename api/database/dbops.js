@@ -5,14 +5,7 @@ const assert = require('assert');
 const { pool, withinTX } = require('./database');
 const config = require('../config');
 const { secToHMS } = require('../utils/utils');
-
-const VID_TYPES = {
-  TARGET_REPEAT: "target_repeat",
-  VIG_REPEAT: "vig_repeat",
-  VIG: "vig",
-  TARGET: "target",
-  FILLER: "filler",
-}
+const { VID_TYPES, orderIndexesByLag } = require('../utils/sequence');
 
 const N_LEVELS_PER_NEW_LIFE = 10;
 const MIN_VIG_SCORE = .8;
@@ -163,6 +156,8 @@ async function getVideos(data, seqTemplate) {
   const { workerID, browser, browserVersion, os, deviceType } = data;
 
   const [nTargets, nFillers, ordering] = seqTemplate;
+  orderIndexesByLag(ordering);
+  
   const numVideos = nTargets + nFillers;
 
   await assertNotBlocked(workerID, true);
