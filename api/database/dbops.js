@@ -5,6 +5,7 @@ const assert = require('assert');
 const { pool, withinTX } = require('./database');
 const config = require('../config');
 const { secToHMS } = require('../utils/utils');
+const { placeVidsInTemplate } = require('../utils/sequence');
 
 const VID_TYPES = {
   TARGET_REPEAT: "target_repeat",
@@ -215,13 +216,7 @@ async function getVideos(data, seqTemplate) {
       + '(' + sqlFields + ') VALUES (' + sqlQuestionmarks + ')', sqlValues);
     const levelID = result.insertId;
 
-    // compose and hash the client-side inputs to the level
-    const videos = ordering.map(([index, type]) => {
-      return {
-        url: vidsToShow[index].uri,
-        type: type
-      }
-    });
+    const videos = placeVidsInTemplate(vidsToShow, nFillers, nTargets, ordering);
     taskInputs = { level, videos, levelID };
     const hash = crypto.createHash('sha256');
     hash.update(JSON.stringify(taskInputs));

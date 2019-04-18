@@ -24,6 +24,18 @@ function getSeqTemplate(useShortSequence) {
     }
 }
 
+function placeVidsInTemplateNaive(vids, nFillers, nTargets, ordering) {
+    return ordering.map(([index, type]) => {
+        return {
+            url: vids[index].uri,
+            type: type
+        }
+    })
+}
+
+const placeVidsInTemplate = placeVidsInTemplateNaive;
+
 module.exports = {
-  getSeqTemplate
+  getSeqTemplate, 
+  placeVidsInTemplate
 };
