@@ -564,8 +564,6 @@ describe('Test scoring functions', () => {
 
         presentations = createMockPresentations(40, true, false, false);
         const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
-        debug('passed, overallScore, vigilanceScore, falsePositiveRate',passed, overallScore, vigilanceScore, falsePositiveRate)
-        debug('falsePositiveRate', falsePositiveRate)
         expect(vigilanceScore).toEqual(0);
         expect(passed).toEqual(false);
         done();
@@ -584,7 +582,6 @@ describe('Test scoring functions', () => {
 
         presentations = createMockPresentations(40, false, true, false)
         const {passed, overallScore, vigilanceScore, falsePositiveRate} = calcScores(presentations);
-        debug('IN ACC TEST:',passed, overallScore, vigilanceScore, falsePositiveRate)
         expect(passed).toEqual(true);
         done();
     });
@@ -1215,14 +1212,12 @@ describe('Test video prioritization', () => {
         for (let user of [user1, user2]) {
             const seen = new Set();
             for (let i = 0; i < expectedNumLevels; i++) {
-                debug("User " + user + " i " + i);
                 const { videos } = await getVideos({workerID: user, ...userAgentData}, template);
                 videos.map(({ url }) => {
                     expect(seen.has(url)).toBe(false);
                     seen.add(url);
                 });
             }
-            debug("User " + user + " last one");
             await checkThrowsError(async() => {
                 const vids = await getVideos({workerID: user, ...userAgentData}, template);
             }, OutOfVidsError);
@@ -1302,6 +1297,29 @@ describe('Test update label counts', () => {
     expect(labelCounts.filter(({ labels }) => labels === 0)).toHaveLength(3);
 
     config.maxLevelTimeSec = orig;
+    done();
+  });
+
+  test('Should set correct label counts when a game is failed', async (done) => {
+    for (let i = 0; i < 3; i += 1) {
+      await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, 5]);
+    }
+    const username = "testFixLabelCountsFailedGame";
+    const { answers, inputs } = await getVidsAndMakeAnswers(
+        username, 
+        correct=false, 
+        true
+    );
+    await saveResponses({
+      workerID: username,
+      levelID: inputs.levelID,
+      responses: answers,
+      levelInputs: inputs
+    });
+    await fixLabelCounts();
+    const labelCounts = await pool.query('SELECT labels FROM videos;');
+    expect(labelCounts.filter(({ labels }) => labels === 0)).toHaveLength(3);
+    expect(labelCounts.filter(({ labels }) => labels === 1)).toHaveLength(0);
     done();
   });
 });

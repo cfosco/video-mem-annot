@@ -15,9 +15,11 @@ const VID_TYPES = {
 }
 
 const N_LEVELS_PER_NEW_LIFE = 10;
+const MIN_VIG_SCORE = .8;
+const MAX_FPR = .5;
 
 const didPassLevel = function (overallScore, vigilanceScore, falsePositiveRate) {
-  return vigilanceScore > .8 && falsePositiveRate < .5;
+  return vigilanceScore > MIN_VIG_SCORE && falsePositiveRate < MAX_FPR;
 }
 
 // Errors to be used in the API
@@ -96,6 +98,7 @@ async function getNextLevelNum(userID) {
  * This sets all label counts to a number reflecting only
  *   completed and pending (within the time limit) levels
  */
+  //return vigilanceScore > MIN_VIG_SCORE && falsePositiveRate < MAX_FPR;
 async function fixLabelCounts() {
   const durHMS = secToHMS(config.maxLevelTimeSec);
   const labelCountsQuery = `SELECT videos.id, count(T.id_video) as real_labels
@@ -105,8 +108,12 @@ LEFT JOIN (
     FROM levels JOIN presentations
     ON levels.id = presentations.id_level
     WHERE (
-        levels.score IS NOT NULL
-    	OR TIMEDIFF(CURRENT_TIMESTAMP, levels.insert_time) < "${durHMS}"
+        (levels.score IS NOT NULL
+        AND levels.vig_score > "${MIN_VIG_SCORE}"
+        AND levels.false_pos_rate < "${MAX_FPR}")
+    	OR 
+        (levels.score IS NULL
+        AND TIMEDIFF(CURRENT_TIMESTAMP, levels.insert_time) < "${durHMS}")
     ) AND presentations.targeted = 1 AND presentations.duplicate = 1
 ) as T
 ON videos.id = T.id_video
