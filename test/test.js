@@ -4,7 +4,11 @@ const assert = require('assert');
 const app = require('../api/app');
 const config = require('../api/config');
 const { pool, initDB } = require('../api/database/database');
-const { getSeqTemplate } = require('../api/utils/sequence');
+const {
+  getSeqTemplate,
+  orderIndexesByLag,
+  VID_TYPES
+} = require('../api/utils/sequence');
 const {
     getVideos,
     saveResponses,
@@ -766,8 +770,6 @@ describe('Test rewards', () => {
   });
 });
 
-
-
 describe('Test level concurrency', () => {
     test('Level results should be properly matched when multiple levels are open', async (done) => {
         const username = "multipleLevels";
@@ -1368,4 +1370,20 @@ describe('Test update label counts', () => {
 //    expect(labelCounts.filter(({ labels }) => labels === 1)).toHaveLength(0);
 //    done();
 //  });
+});
+
+describe('Test reorder sequence indexes by lag', () => {
+  test('Should reorder indexes by lag', () => {
+    const ordering = [
+      [0, VID_TYPES.TARGET],
+      [0, VID_TYPES.TARGET_REPEAT],
+      [1, VID_TYPES.TARGET],
+      ...Array(150).fill().map((_, i) => [i+3, VID_TYPES.FILLER]),
+      [1, VID_TYPES.TARGET_REPEAT],
+    ];
+    const num = orderIndexesByLag(ordering);
+    expect(num).toBe(1);
+    expect(ordering[0][0]).toBe(1);
+    expect(ordering[ordering.length -1][0]).toBe(0);
+  });
 });
