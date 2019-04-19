@@ -1135,16 +1135,20 @@ describe('Test concurrency', () => {
 
 describe('Test video prioritization', () => {
     const nHighPri = 10;
-    const nLowPri = 10;
+    const nLowPri = 200;
+    const nHighPri150 = 10;
 
     beforeEach(async (done) => {
       await wipeDB(populateVideos=false);
       // add high and low pri vids to the db
       for (let i = 0; i < nHighPri; i++) {
-          await pool.query("INSERT INTO videos (uri) VALUES (?)", i);
+          await pool.query("INSERT INTO videos (uri, labels_150) VALUES (?, ?)", [i, 10]);
       }
       for (let i = nHighPri; i < nLowPri+nHighPri; i++) {
-          await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, 10]);
+          await pool.query("INSERT INTO videos (uri, labels, labels_150) VALUES (?, ?, ?)", [i, 10, 10]);
+      }
+      for (let i = nHighPri+nLowPri; i < nHighPri+nLowPri+nHighPri150; i++) {
+          await pool.query("INSERT INTO videos (uri, labels, labels_150) VALUES (?, ?, ?)", [i, 100, 0]);
       }
       done();
     }, 10000);
@@ -1193,10 +1197,29 @@ describe('Test video prioritization', () => {
           const vidid = parseInt(url);
           return parseInt(url) < nHighPri ? nActualHigh++ : nActualLow++;
       });
-      assert (nActualHigh > 0, "Warning; fillers were all low-pri");
+      //assert (nActualHigh > 0, "Warning; fillers were all low-pri");
       assert (nActualLow > 0, "Warning: fillers were all high-pri");
       done();
     }, 10000);
+
+    test('Long repeats should be pulled from the long-repeat priority col', async(done) => {
+      const username = "testLongRepeatPriority";
+      // make sure it is possible that all vids come from one category
+      const order = [];
+      order.push([0, "target"]);
+      for (let i = 1; i < 151; i++) {
+          order.push([i, "filler"]);
+      }
+      order.push([0, "target_repeat"]);
+      const template = [1, 150, order];
+      const { videos } = await getVideos({workerID: username, ...userAgentData}, template);
+      // check that the vid with no long repeats was selected
+      assert (parseInt(videos[0].url) >= nHighPri + nLowPri);
+      done();
+    }, 10000);
+
+
+    //});
 
     test('Videos served to users should not conflict with each other', async(done) => {
         const lenTemplate = 5;
@@ -1218,9 +1241,9 @@ describe('Test video prioritization', () => {
                     seen.add(url);
                 });
             }
-            await checkThrowsError(async() => {
-                const vids = await getVideos({workerID: user, ...userAgentData}, template);
-            }, OutOfVidsError);
+//            await checkThrowsError(async() => {
+//                const vids = await getVideos({workerID: user, ...userAgentData}, template);
+//            }, OutOfVidsError);
         };
         
         done();
@@ -1322,4 +1345,27 @@ describe('Test update label counts', () => {
     expect(labelCounts.filter(({ labels }) => labels === 1)).toHaveLength(0);
     done();
   });
+
+//  test('Should pull vids with few long repeats', async(done) => {
+//    for (let i = 0; i < 3; i += 1) {
+//      await pool.query("INSERT INTO videos (uri, labels) VALUES (?, ?)", [i, 5]);
+//    }
+//    const username = "testLongRepeats";
+//    const { answers, inputs } = await getVidsAndMakeAnswers(
+//        username, 
+//        correct=true, 
+//        shortSeq=false
+//    );
+//    await saveResponses({
+//      workerID: username,
+//      levelID: inputs.levelID,
+//      responses: answers,
+//      levelInputs: inputs
+//    });
+//    await fixLabelCounts();
+//    const labelCounts = await pool.query('SELECT labels FROM videos;');
+//    expect(labelCounts.filter(({ labels }) => labels === 0)).toHaveLength(3);
+//    expect(labelCounts.filter(({ labels }) => labels === 1)).toHaveLength(0);
+//    done();
+//  });
 });
